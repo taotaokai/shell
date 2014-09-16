@@ -1,0 +1,79 @@
+#!/bin/bash
+
+#plot a list of sac files
+
+gmt set COLOR_MODEL rgb
+gmt set PS_MEDIA A4
+gmt set PS_PAGE_ORIENTATION portrait
+gmt set PROJ_LENGTH_UNIT cm 
+gmt set MAP_FRAME_WIDTH 0.1
+gmt set MAP_TICK_LENGTH_PRIMARY 0.3c
+gmt set FONT_ANNOT_PRIMARY			12p,Times-Roman,black
+gmt set FONT_ANNOT_SECONDARY		14p,Times-Roman,black
+gmt set FONT_LABEL			 				16p,Times-Roman,black
+gmt set FONT_LOGO			 				 8p,Times-Roman,black
+gmt set FONT_TITLE			 				24p,Times-Roman,black
+gmt set FORMAT_CLOCK_MAP hh:mm:ss
+
+LIST=$1
+TIMERANGE=$2
+TITLE=$3
+OUT=$4
+
+# options for gmt plot
+nsac=$(sed -n '$=' $LIST)
+
+west=$(echo $TIMERANGE | awk -F"/" '{print $1}')
+east=$(echo $TIMERANGE | awk -F"/" '{print $2}')
+south=-0.5
+north=$nsac
+R=-R${west}/${east}/${south}/${north}
+
+J=-JX18ct/25c
+B="-Bpxa5Sf1s"
+PS=$OUT
+
+timestr=$(saclst kzdate kztime f $(head -n1 $LIST) |\
+          awk '{print $2,$3}' | sed "s/\//-/g")
+xlabel=$(echo $timestr | awk '{print $1}')
+epoch=$(echo $timestr | awk '{print $1"T"$2}')
+
+gmt set TIME_EPOCH $epoch
+
+# plot sac 
+gmt psbasemap $R $J $B -Bpx+l${xlabel} -BS+t${TITLE} -P -K -X1.7c > $PS
+
+tmp=$(mktemp -u  ./tmpXXXX)
+
+offset=0
+for sacf in $(cat $LIST)
+do
+
+  stnm=$(saclst kstnm kcmpnm f $sacf | awk '{c=substr($3,3,1);print $2"."c}')
+
+sac<<EOF
+r $sacf
+rmean;rtrend; taper
+bp co 10 40 n 4 p 2
+decimate 2
+decimate 5
+w ${tmp}.sac
+q
+EOF
+
+	sac2ascii $tmp.sac -w$west/$east > ${tmp}.txt
+  mean=$(awk 'function abs(x){return ((x < 0.0) ? -x : x)}
+              {sum+=abs($2)} END{print sum/NR}' ${tmp}.txt)
+
+  awk -vm=$mean -vo=$offset '{print $1,o+$2/m/10}' ${tmp}.txt |\
+	gmt psxy -R -J -B -V -Wthinner,black -O -K >> $PS
+
+	echo $west $offset $stnm | awk '{print $1,$2,$3"\\b"}' |\
+	  gmt pstext -R -J -F+f12p,Times-Roman,red+jMR -N -O -V -K >> $PS
+
+  let "offset += 1"
+done
+
+rm ${tmp}*
+
+#gs $PS
