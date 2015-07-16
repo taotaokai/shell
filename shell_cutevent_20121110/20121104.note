@@ -1,0 +1,21 @@
+# convert rt130 to seed (bash script: RT130_to_Seed.bash)
+    1. $ cat JB.rt130.lst | bash RT130_to_Seed.bash 
+        #sample of JB.rt130.lst: "/home/geodyn/COLT/COLT_RAW/JinBian/JinBian0912/JB01 JB01"
+
+# make data list (bash cripts: Make_datalst.bash, Seed_gettime.bash)
+    1. $ cat STN.lst | bash Make_datalst.bash
+        #ofile: (stnm).lst 
+        #sample: JB01.lst: "JB01/XX.STN.2009.199/BHE..03.27.33.265.m 1247887653265000000 1247891253240000000"
+
+# change directory structure and re-name files
+    1. $ cat STN.lst | bash Rename_data.bash > mv.lst
+        #sample: mv.lst: "mv JB01/XX.STN.2009.199/BHE..03.27.33.265.m JB01/BHE/1247887653265000000.seed"
+        #ofile: (stnm).inf
+        #sample: JB01.inf: "JB01/BHE/1247887653265000000.seed 1247887653265000000 1247891253240000000"
+    2. $ bash mv.lst
+    3. # copy the .inf file into each station directory
+
+# check the record time range
+    1. $ cat STNLST/STN.lst | awk '{printf "tail -n1 %s/SEED.lst\n",$1}' | bash | awk '{printf "date -u -d @%f\n",$3/10^9}' | bash
+
+# cut event

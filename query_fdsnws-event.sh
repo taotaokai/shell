@@ -38,7 +38,8 @@ done
 
 # validate input arguments
 
-echo This run: $0 -T$T -M$M -R$R -O$O
+#echo This run: $0 -T$T -M$M -R$R -O$O
+echo "#This run: $0 -T$T -M$M -R$R -O$O" | tee $O
 
 # form the query links 
 # keywords: [starttime,endtime,minlatitude,maxlatitude,minlongitude,maxlongitude,latitude,longitude,maxradius,minradius,mindepth,maxdepth,minmagnitude,maxmagnitude,magnitudetype]
@@ -53,6 +54,8 @@ strM=$(echo $M | awk -F"/" '{printf "minmagnitude=%s&maxmagnitude=%s",$1,$2}')
 
 strLink="$strHead&$strT&$strM&$strR&format=text"
 
-wget $strLink -O $O
+wget $strLink -O - >> $O
+
+echo "Finished. "
 
 # END

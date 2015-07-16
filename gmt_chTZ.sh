@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#USAGE: gmt_chTZ.sh "-8" < time.lst (get UTC time from Beijing time)
+#USAGE: gmt_chTZ.sh "-8" < time.lst (convert Beijing time to UTC)
 
 diffT=$1
 

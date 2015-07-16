@@ -1,15 +1,14 @@
 #!/bin/bash
 
 function usage(){
-    printf "Usage: %s: [-L SAC_List] [-D SAC_DIR] \n" $0
-    echo "Default: $0 [-L-] -D."
+	echo "Usage: $0 [-L SAC_List] [-D SAC_DIR]"
+	echo "Default: $0 -L- -D."
 	echo "evdp(km) and gcarc(degree) should be correctly set in SAC header!"
 	echo "user0: rayp(s/km); user1: rayp(s/deg)"
-    exit 1
+	exit 1
 }
 
 # Default parameters
-
 saclst=-
 sacdir=.
 
@@ -42,7 +41,7 @@ do
 	angrayp=$(taup_time -h $evdp -deg $gcarc -ph P -rayp | sed -n "1p")
 #	echo taup_time -h $evdp -deg $gcarc -ph P -rayp
 #	echo "$angrayp * 180 / 6371 / 4 / a(1)" 
-	horirayp=$(echo "scale=12;$angrayp * 180 / 6371 / 4 / a(1)" | bc -l)
+	horirayp=$(echo "scale=6;$angrayp * 180 / 6371 / 4 / a(1)" | bc -l)
 
 	echo "$sacf gcarc $gcarc evdp $evdp angrayp $angrayp horirayp $horirayp"
 

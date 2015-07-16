@@ -1,21 +1,20 @@
 #!/bin/bash
 
+wkdir=$(pwd)
+
 # usage
 function usage(){
 	echo ==========================
 	printf "Usage: %s: [-S STN_List] [-D DATA_DIR] [-I SACID] [-O Out_DIR]\n" $0
 	echo --------------------------
 	echo "STN_List: stnm"
-	echo "DATA_DIR: where SAC files are stored"
+	echo "DATA_DIR: /stnm/SAC.lst should already exist"
 	echo "SACID: find -name"SACID" will be used to locate all the sac files"
 	echo "OUT_DIR: the index file stnm.index will be written into this dicretory"
 	echo ==========================
-	echo "Default: $0 -S- -I\"*.sac\" -D. -O."
+	echo "Default: $0 -S- -I"*.sac" -D. -O."
 	echo ==========================
 }
-
-
-wkdir=$(pwd)
 
 # Default parameters
 STNLST=-
@@ -44,7 +43,7 @@ do
 	cd $DATDIR
 	# read sac file and output the start/end time in epoch nano-seconds
 	cat /dev/null > $wkdir/$OUTDIR/$stnm.index
-  find $stnm -name "$SACID" | sort |\
+    	find $stnm -name "$SACID" | sort |\
 	while read sacfile 
 	do
 		gmt_ref=$(dumpSHD $sacfile nzyear nzjday nzhour nzmin nzsec nzmsec b e| awk '{print $3,$5,$7,$9,$11,$13,$15,$17}')
@@ -59,5 +58,3 @@ do
 	done
 	cd $wkdir
 done
-
-#END

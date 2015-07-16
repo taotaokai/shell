@@ -10,31 +10,31 @@
 #[20140719]tao: the -K option now assume component name without preceding dot (e.g -K BHE/BHN/BHZ)
 #[20140725]tao: use bash build-in ${string:position:length} to cut the gmt time string instead of $(echo $gmt | cut -c1-4,5-6,7-8 --output-delimiter "-"), because sometimes the later won't add the output delimiter, which is strange and I cannot find the reason.
 #[20140726]tao: used file descriptor to safely read lines from "while read -r"
-#[20140726]tao: change the time specification in CUT_LIST to "ref_time begin end"
-#[20140726]tao: remove the default behavior to read from stdin if -S not specified 
 
-usage(){
-	echo "usage: $0 -C<CUT_List> -S<STN_List> -I<INDEX> -K<comp> -D<dataDIR> -O<outDIR>"
-	echo
-	echo "	-C CUT_List: ref_time begin end"
-	echo "	ref_time should be in the format yyyymmdd_HHMMSS(.SSS) and timezone UTC+00:00 is assumed"
-	echo "	begin/end are seconds before and after the ref_time"
-	echo "	-S STN_List: netwk stnm stlo stla stel"
-	echo "	-I INDEX_File: sacfn begin-time end-time"
+function usage(){
+	echo ======================================
+	printf "Usage: %s: [-C CUT_List] [-S STN_List] [-I INDEX_File] [-K CMP1/CMP2/CMP3] [-D DATA_DIR] [-O OUT_DIR]\n" $0
+	echo --------------------------------------
+	echo "-C CUT_List: evnm begin-time end-time"
+	echo "	begin-time and end-time should be in the format yyyymmdd_hhmmss and timezone UTC+00:00 is assumed"
+	echo "-S STN_List: netwk stnm stlo stla stel"
+	echo "	the default is read from stdin"
+	echo "-I INDEX_File: sacfn begin-time end-time"
 	echo "	begin-time and end-time should be the epoch time (nanoseconds) equivalent to the output of \$(date -d "date string" +%s%N)"
-	echo "	-K CMP1/CMP2/CMP3: slash separated strings to identify different components, such as .Z/.N/.E, each component string will be used with grep -F (treat as a fixed string!) to find out files of the same component during the merging SAC process;"
-	echo "	-D DATA_DIR: SAC data is stored in DATA_DIR/{stnm}/*.sac"
+	echo "-K CMP1/CMP2/CMP3: slash separated strings to identify different components, such as .Z/.N/.E, each component string will be used with grep -F (treat as a fixed string!) to find out files of the same component during the merging SAC process;"
+	echo "-D DATA_DIR: SAC data is stored in DATA_DIR/{stnm}/*.sac"
 	echo "	DATA_DIR/{sacfn} will be used to locate sac files."
-	echo "	-O OUT_DIR: the output file path is {OUT_DIR}/{stnm}/{ref_time}.{netwk}.{stnm}.{CMP?}"
-	echo
-	echo "Default: $0 -C CUT.lst -S STN.lst -I SAC.index -K BHZ/BHN/BHE -D. -O."
-	exit -1
+	echo "-O OUT_DIR: the output file path is {OUT_DIR}/{stnm}/{evnm}.{netwk}.{stnm}.{CMP?}"
+	echo ======================================
+	echo "Default: $0 -C CUT.lst -S- -I SAC.index -K BHZ/BHN/BHE -D. -O."
+	echo ======================================
+	exit 1
 }
 
 # Default parameters
 
 CUTLST=CUT.lst
-STNLST=STN.lst
+STNLST=-
 CMPSTR="BHE/BHN/BHZ"
 INDEX=SAC.index
 OUTDIR=.
@@ -56,13 +56,8 @@ done
 
 if [ ! -f "$CUTLST" ]
 then
+   #echo "Error: option -L and -C must be specified!"
    echo "Error: $CUTLST does not exist!"
-   usage
-fi
-
-if [ ! -f "$STNLST" ]
-then
-   echo "Error: $STNLST does not exist!"
    usage
 fi
 
@@ -78,7 +73,7 @@ then
 	usage
 fi
 
-echo "This run: $0 -C $CUTLST -S $STNLST -K $CMPSTR -I $INDEX -D $DATDIR -O $OUTDIR"
+echo "This run: $0 -C $CUTLST -K $CMPSTR -I $INDEX -D $DATDIR -O $OUTDIR"
 
 # loop for each station
 tmp_lst=$(mktemp -p. tmp.lst.XXX)
@@ -87,7 +82,8 @@ tmp_sta=$(mktemp -p. tmp.sta.XXX)
 tmp_cut=$(mktemp -p. tmp.cut.XXX)
 
 # sed: remove blank and commented lines ([20140615])
-sed '/^\s*$/d;/^#/d' $STNLST > $tmp_sta
+# cat should be used here, to read from stdin -
+cat $STNLST | sed '/^\s*$/d;/^#/d' > $tmp_sta
 sed '/^\s*$/d;/^#/d' $CUTLST > $tmp_cut
 
 while read -r -u3 netwk stnm stlo stla stel tmp
@@ -98,20 +94,21 @@ do
 	    mkdir -p $OUTDIR/$stnm
 	fi
 
-	while read -r -u4 reftime begin end tmp
+	while read -r -u4 evnm starttime endtime tmp
 	do
 	
-		# begin/end cut time in epoch (nanoseconds)
-		ymd=${reftime:0:4}-${reftime:4:2}-${reftime:6:2}
-		hms=${reftime:9:2}:${reftime:11:2}:${reftime:13}
-		otime=$(date -u -d "${ymd} ${hms}" +%s%N )
+		# begin/end cut time (nanoseconds)
+		ymd=${starttime:0:4}-${starttime:4:2}-${starttime:6:2}
+		hms=${starttime:9:2}:${starttime:11:2}:${starttime:13:2}
+		btime=$(date -u -d "${ymd} ${hms}" +%s%N )
 
-		btime=$(echo $otime $begin | awk '{print $1+10^9*$2}')
-		etime=$(echo $otime $end | awk '{print $1+10^9*$2}')
+		ymd=${endtime:0:4}-${endtime:4:2}-${endtime:6:2}
+		hms=${endtime:9:2}:${endtime:11:2}:${endtime:13:2}
+		etime=$(date -u -d "${ymd} ${hms}" +%s%N )
 
 		echo ===================
 		echo Date: $(date)
-		echo CUT: $reftime $begin $end
+		echo CUT: $starttime $endtime
 		echo STN: $netwk $stnm $stlo $stla $stel
 
 		# find sac files that cover time range [btime,etime] in the INDEX file
@@ -124,46 +121,31 @@ do
 		echo MERGE:
 		cat $tmp_lst
 
-		# generate sac macro
-		cat /dev/null > $tmp_sacm # the content from the last loop must be cleaned
-
-		#merge sac
+		# merge sac
 		sacfn=$(mktemp -p. -u)
+		cat /dev/null > $tmp_sacm # the content from the last loop must be cleaned
 		for cmpnm in $(echo $CMPSTR | sed "s/\// /g")
 		do
 			cat $tmp_lst | grep -F "$cmpnm" |\
-			awk 'NR==1{printf "r %s\n",$1}NR>=2{printf "merge overlap average %s\n",$1}END{if(NR>=1) printf "ch kcmpnm %s;w %s.%s\n",cmpnm,sacfn,cmpnm}' sacfn="$sacfn" cmpnm="$cmpnm" >> $tmp_sacm
+        awk 'NR==1{printf "r %s\n",$1}NR>=2{printf "merge %s\n",$1}END{if(NR>=1) printf "ch kcmpnm %s;w %s.%s\n",cmpnm,sacfn,cmpnm}' sacfn="$sacfn" cmpnm="$cmpnm" >> $tmp_sacm
 		done
 
-		#time cut and write event info
-		tmp=$(echo "$otime/10^9" | bc -l)
-		gmt_otime=$(date -u -d @$tmp +%Y" "%j" "%H" "%M" "%S" "%N | awk '{printf "%s %s %s %s %s %3d",$1,$2,$3,$4,$5,$6/10^6}')
+		# time cut and write event info
 		tmp=$(echo "$btime/10^9" | bc -l)
-		gmt_btime=$(date -u -d @$tmp +%Y" "%j" "%H" "%M" "%S" "%N | awk '{printf "%s %s %s %s %s %3d",$1,$2,$3,$4,$5,$6/10^6}')
+		gmt_btime=$(date -u -d @$tmp +%Y" "%j" "%H" "%M" "%S.%N)
 		tmp=$(echo "$etime/10^9" | bc -l)
-		gmt_etime=$(date -u -d @$tmp +%Y" "%j" "%H" "%M" "%S" "%N | awk '{printf "%s %s %s %s %s %3d",$1,$2,$3,$4,$5,$6/10^6}')
+		gmt_etime=$(date -u -d @$tmp +%Y" "%j" "%H" "%M" "%S.%N)
 
-		echo CUT: B $gmt_btime E $gmt_etime
+		echo CUT: cut gmt $gmt_btime gmt $gmt_etime
 
 		echo "r $sacfn*" >> $tmp_sacm
-		echo "ch o  gmt $gmt_otime" >> $tmp_sacm
 		echo "ch t1 gmt $gmt_btime" >> $tmp_sacm
 		echo "ch t2 gmt $gmt_etime" >> $tmp_sacm
 		echo "wh" >> $tmp_sacm
 		echo "cut t1 0 t2 0" >> $tmp_sacm
 		echo "r $sacfn*" >> $tmp_sacm
-		echo "ch kevnm $reftime knetwk $netwk kstnm $stnm stla $stla stlo $stlo stel $stel" >> $tmp_sacm
+		echo "ch kevnm $evnm knetwk $netwk kstnm $stnm stla $stla stlo $stlo stel $stel" >> $tmp_sacm
 		echo "w over" >> $tmp_sacm
-
-		#set origin time to zero
-		echo "cut off" >> $tmp_sacm
-		for cmpnm in $(echo $CMPSTR | sed "s/\// /g")
-		do
-			echo "r ${sacfn}.${cmpnm}" >> $tmp_sacm
-			echo "eval to v -1 * &1,o" >> $tmp_sacm
-			echo "ch allt %v" >> $tmp_sacm
-			echo "wh" >> $tmp_sacm
-		done
 
 sac <<EOF
 m $tmp_sacm
@@ -173,9 +155,12 @@ EOF
 		# rename sac and move into the output directory
 		for cmpnm in $(echo $CMPSTR | sed "s/\// /g")
 		do
-			#${reftime:0:15}: trim reftime to yyyymmdd_HHMMSS
-			echo OUT: mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${reftime:0:15}.${netwk}.${stnm}.${cmpnm}
-			mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${reftime:0:15}.${netwk}.${stnm}.${cmpnm}
+			#tmp=$(echo "$btime/10^9" | bc -l)
+			#gmt_btime=$(date -u -d @$tmp +%Y%m%d_%H%M%S)
+			#echo mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${gmt_btime}.${netwk}.${stnm}.${cmpnm}
+			echo OUT: mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${evnm}.${netwk}.${stnm}.${cmpnm}
+			#mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${gmt_btime}.${netwk}.${stnm}.${cmpnm}
+			mv ${sacfn}.${cmpnm} $OUTDIR/$stnm/${evnm}.${netwk}.${stnm}.${cmpnm}
 		done
 
 	done 4<$tmp_cut
