@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# plot and check SAC files 
+
 if [ $# -ne 2 ] 
 then
 	echo "Two Arguments expected. Usage: chkSAC datlist tracenumber" 
