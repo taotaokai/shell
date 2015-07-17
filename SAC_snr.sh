@@ -13,7 +13,7 @@ usage(){
   echo "  -n  noise time window: tmarker/begin/end"
   echo "  -s  signal time window: tmarker/begin/end"
   echo "  -f  sac filter command."
-  echo "  -l  sac file list. If not exist, read from STDIN"
+  echo "  -l  sac file list (default: STDIN)."
   echo 
   exit -1
 }
@@ -79,8 +79,9 @@ EOF
 
   # calculate SNR
   cat $tmp_txt |\
-    awk '{printf "%-16s | noise %s %5.1f %5.1f %9.2e | signal %s %5.1f %5.1f %9.2e | SNR %9.2e\n", \
-          fn, tn,t0n,t1n,$1, ts,t0s,t1s,$2, $2/$1}' fn=$sacfn \
+    awk '{if($1!=0) snr=$2/$1; if($1==0&&$2==0) snr=0; if($1==0&&$2!=0) snr=-1;\
+          printf "%-16s | noise %s %5.1f %5.1f %9.2e | signal %s %5.1f %5.1f %9.2e | SNR %9.2e\n", \
+          fn, tn,t0n,t1n,$1, ts,t0s,t1s,$2, snr}' fn=$sacfn \
           tn=$tmark_noise t0n=$noise_b t1n=$noise_e \
           ts=$tmark_signal t0s=$signal_b t1s=$signal_e
 
