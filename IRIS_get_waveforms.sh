@@ -1,48 +1,80 @@
 #!/bin/bash
 
 # download IRIS data from a given event list
+
 # dependecies:
 # - IRIS Fetch scripts:
 # - IRIS mseed2sac
+# - TAUP:taup_time
+
+usage(){
+  echo
+  echo "Syntax:"
+  echo "  $0 -s 15:55/90:145 -t p,P/-300/1500 -l- -o ./"
+  echo
+  echo "Parameters:"
+  echo "  -s  geographic range of stations: lat0:lat1/lon0:lon1"
+  echo "  -t  time window phase/begin/end. If multiple phases specified, \
+use the smallest traveltime as the reference time."
+  echo "  -l  list of events to download (default read from STDIN)."
+  echo "  -o  output directory."
+  echo 
+  exit -1
+}
 
 #===== parameters
 
-#-- events
-event_file=${1:-event.txt}
+#defaults
+event_list=-
+geo_range=15:55/90:145
+twin=p,P/-300/1500
+out_dir=./
 
-#-- station/channel selection
-staLatRange=15:55
-staLonRange=90:145
+# parse options
+while getopts s:t:l:o:h name
+do
+    case $name in
+    s)  geo_range="$OPTARG";;
+    t)  twin="$OPTARG";;
+    l)  event_list="$OPTARG";;
+    o)  out_dir="$OPTARG";;
+    [h,?])  usage; exit -1
+    esac
+done
 
-#-- data time window referred to first arrival
-twin_b=-300
-twin_e=1500
+echo "##### The program is run as:"
+echo "# $0 -s $geo_range -t $twin -l $event_list -o $out_dir"
 
-#-- outputs
-out_dir=${2:-events}
+staLatRange=${geo_range%/*}
+staLonRange=${geo_range#*/}
+
+if [ -z "$staLatRange" -o -z "$staLonRange" ]
+then
+  echo "[WARN] Wrong geographic range: lat=$staLatRange lon=$staLatRange "
+  exit -1
+fi
+
+phase=$(echo $twin  | awk -F"/" '{print $1}')
+twin_b=$(echo $twin | awk -F"/" '{print $2}')
+twin_e=$(echo $twin | awk -F"/" '{print $3}')
+
+if [ -z "$phase" -o -z "$twin_b" -o -z "$twin_e" ]
+then
+  echo "[WARN] Wrong time window: phase=$phase b=$twin_b e=$twin_e"
+  exit -1
+fi
 
 #===== get data for each event 
 
 wkdir=$(pwd)
 tmpdir=$wkdir
 
-echo "########################"
-echo "###### Parameters ######"
-echo "########################"
-echo "event_file=$event_file"
-echo "staLatRange=$staLatRange "
-echo "staLonRange=$staLonRange "
-echo "twin_b=$twin_b"
-echo "twin_e=$twin_e"
-echo "out_dir=$out_dir"
-echo "########################"
-
 IFS=$'\n'
 for event_line in $(cat $event_file)
 do
 
   echo
-  echo "#===== $event_line"
+  echo "===== EVENT: $event_line"
   echo
 
   #-- parse each line in the event list
@@ -57,6 +89,7 @@ do
   evojday=$(date -u -d "$evodate UTC" +%Y,%j,%H:%M:%S.%N)
 
   #-- check potential stations/channels
+  echo "----- query for stations/channels"
 
   # data should exist 1 day before the earthquake
   starttime=$(date -u -d "$evodate UTC 1 days ago" +%Y-%m-%dT%H:%M:%S)
@@ -98,6 +131,9 @@ do
   echo $event_line > $evtdir/data/event.txt
 
   #-- generate data selection list
+
+  echo "----- make data selection list"
+
   cat /dev/null > $evtdir/data/dataselect.txt
 
   for station_line in $(grep -v "^#" $tmp_station)
@@ -111,11 +147,11 @@ do
     stlo=${sta[5]}
 
     # get traveltime
-    ttp=$(aktimes $evla $evlo $evdp $stla $stlo $AK135_TABLE | \
-          head -n1 | awk '{print $1}')
+    ttp=$(taup_time -evt $evla $evlo -h $evdp \
+          -sta $stla $stlo --time -ph $phase | head -n1 | awk '{print $1}')
 
     if [ -z "$ttp" ]; then
-      echo "[ERROR] wrong travaltime ttp=$ttp"
+      echo "[ERROR] taup_time failed to get travaltime ttp=$ttp"
       exit
     fi
 
@@ -135,6 +171,9 @@ do
   rm $tmp_station
 
   #-- get data (waveform & sacpz)
+  
+  echo "----- query for waveform and sacpz files"
+
   FetchData.pl \
     -l $evtdir/data/dataselect.txt \
     -o $evtdir/mseed/$evid.mseed \
@@ -142,11 +181,14 @@ do
     -sd $evtdir/sacpz
 
   #-- convert mseed to sac
+
+  echo "----- convert mseed to sac"
+
   cd $evtdir/sac
   mseed2sac \
     -m $evtdir/data/station.txt \
     -E "$evojday/$evla/$evlo/$evdp/${evt[9]}" \
-    $evtdir/mseed/$evid.mseed
+    $evtdir/mseed/$evid.mseed > mseed2sac.log 2>&1
 
   cd $wkdir
 
