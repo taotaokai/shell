@@ -63,7 +63,7 @@ echo "# $0 -b $b -e $e -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sa
 wkdir=$(pwd)
 
 # temporary directory
-tmp_dir=$(mktemp -p. -d)
+tmp_dir=$(mktemp -d)
 
 # get station metadata 
 data_list=$tmp_dir/data_list
