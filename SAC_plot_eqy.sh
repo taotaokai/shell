@@ -68,7 +68,7 @@ tmp_dir=$(mktemp -d)
 # get station metadata 
 data_list=$tmp_dir/data_list
 cd $sac_dir
-saclst gcarc o az knetwk kstnm f $(cat $sac_list) | sort -n -k2 > $data_list 
+saclst gcarc o az knetwk kstnm f $(cat $wkdir/$sac_list) | sort -n -k2 > $data_list 
 cd $wkdir
 ntrace=$(cat $data_list | wc -l)
 
