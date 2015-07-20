@@ -7,12 +7,13 @@
 usage(){
   echo
   echo "Syntax:"
-  echo "  $0 -b -50 -e 500 -s 10 -f \"bp co 0.01 0.2 n 4 p 2\" -t Profile -l list -o profile.ps"
+  echo "  $0 -b -50 -e 500 -s 10 -f \"bp co 0.01 0.2 n 4 p 2\" -d./ -t Profile -l list -o profile.ps"
   echo
   echo "Parameters:"
   echo "  -b/-e  begin and end time."
   echo "  -s  slowness for reduced time."
   echo "  -f  sac filter command."
+  echo "  -d  sac data directory."
   echo "  -t  string of title."
   echo "  -l  list of sac files."
   echo "  -o  output PS file."
@@ -27,18 +28,20 @@ b=-50
 e=500
 s=10
 sac_filter="bp co 0.01 0.2 n 4 p 2"
+sac_dir=./
 title="Profile"
 sac_list=list
 ps=profile.ps
 
 # parse options
-while getopts b:e:s:f:t:l:o:h name
+while getopts b:e:s:f:d:t:l:o:h name
 do
     case $name in
     b)  b="$OPTARG";;
     e)  e="$OPTARG";;
     s)  s="$OPTARG";;
     f)  sac_filter="$OPTARG";;
+    d)  sac_dir="$OPTARG";;
     t)  title="$OPTARG";;
     l)  sac_list="$OPTARG";;
     o)  ps="$OPTARG";;
@@ -53,7 +56,7 @@ then
 fi
 
 echo "#===== Parameters:"
-echo "# $0 -b $b -e $e -s $s -f \"$sac_filter\" -t \"$title\" -l $sac_list -o $ps"
+echo "# $0 -b $b -e $e -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
 
 #====== cut sac, convert to txt format
 
@@ -75,7 +78,7 @@ do
   reduce_time=$(echo $s $gcarc $ot | awk '{print -1*($1*$2 + $3)}')
 
 sac<<EOF
-r $sacfn
+r dir $sac_dir $sacfn
 ch allt $reduce_time
 rtr;taper
 $sac_filter
