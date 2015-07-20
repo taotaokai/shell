@@ -60,12 +60,16 @@ echo "# $0 -b $b -e $e -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sa
 
 #====== cut sac, convert to txt format
 
+wkdir=$(pwd)
+
 # temporary directory
 tmp_dir=$(mktemp -p. -d)
 
 # get station metadata 
 data_list=$tmp_dir/data_list
+cd $sac_dir
 saclst gcarc o az knetwk kstnm f $(cat $sac_list) | sort -n -k2 > $data_list 
+cd $wkdir
 ntrace=$(cat $data_list | wc -l)
 
 # cut each trace
