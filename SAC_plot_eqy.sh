@@ -68,7 +68,7 @@ tmp_dir=$(mktemp -d)
 # get station metadata 
 data_list=$tmp_dir/data_list
 cd $sac_dir
-saclst gcarc o az knetwk kstnm f $(cat $wkdir/$sac_list) | sort -n -k2 > $data_list 
+saclst gcarc o az knetwk kstnm f $(cat $sac_list) | sort -n -k2 > $data_list 
 cd $wkdir
 ntrace=$(cat $data_list | wc -l)
 
@@ -129,11 +129,11 @@ do
 
   awk 'BEGIN{ORS=" "}; NR>30' $tmp_dir/${n}.txt | tr -s " " "\n" |\
     awk '{print t0+NR*dt, a*$1+y}' t0=$t0 dt=$dt a=$yscale y=$n |\
-    gmt psxy -J -B -R -O -K -P >> $ps
+    gmt psxy -J -R -O -K -P >> $ps
 
    echo $e $n ${knetwk}.${kstnm} $az |\
     awk '{printf "%f %f %s (%03d) ",$1,$2,$3,$4}' |\
-    gmt pstext -J -B -R -F+f8,+jLM -D0.3c/0 -N -P -O -K >> $ps
+    gmt pstext -J -R -F+f8,+jLM -D0.3c/0 -N -P -O -K >> $ps
 
 done
 
