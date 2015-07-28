@@ -27,7 +27,7 @@ use the smallest traveltime as the reference time."
 #defaults
 event_list=-
 geo_range=15:55/90:145
-twin=p,P/-300/1500
+twin=p,P/-300:1500
 out_dir=./
 
 # parse options
