@@ -67,10 +67,9 @@ fi
 #===== get data for each event 
 
 wkdir=$(pwd)
-tmpdir=$wkdir
 
 IFS=$'\n'
-for event_line in $(cat $event_file)
+for event_line in $(cat $event_list)
 do
 
   echo
@@ -94,7 +93,7 @@ do
   # data should exist 1 day before the earthquake
   starttime=$(date -u -d "$evodate UTC 1 days ago" +%Y-%m-%dT%H:%M:%S)
 
-  tmp_station=$(mktemp --tmpdir=$tmpdir)
+  tmp_station=$(mktemp)
 
   FetchData.pl \
     -s $starttime \
@@ -121,8 +120,7 @@ do
   mkdir -p $evtdir
   if [ -d $evtdir ]; then
     cd $evtdir
-    mkdir mseed sac sacpz data
-    cd $wkdir
+    mkdir data mseed resp
   else
     echo "[ERROR] cannot create directory: $evtdir"
   fi
@@ -178,18 +176,6 @@ do
     -l $evtdir/data/dataselect.txt \
     -o $evtdir/mseed/$evid.mseed \
     -m $evtdir/data/station.txt \
-    -sd $evtdir/sacpz
-
-  #-- convert mseed to sac
-
-  echo "----- convert mseed to sac"
-
-  cd $evtdir/sac
-  mseed2sac \
-    -m $evtdir/data/station.txt \
-    -E "$evojday/$evla/$evlo/$evdp/${evt[9]}" \
-    $evtdir/mseed/$evid.mseed > mseed2sac.log 2>&1
-
-  cd $wkdir
+    -rd $evtdir/resp
 
 done
