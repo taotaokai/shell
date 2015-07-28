@@ -10,7 +10,7 @@
 usage(){
   echo
   echo "Syntax:"
-  echo "  $0 -s 15:55/90:145 -t p,P/-300/1500 -l- -o ./"
+  echo "  $0 -s 15:55/90:145 -t p,P/-300:1500 -l- -o ./"
   echo
   echo "Parameters:"
   echo "  -s  geographic range of stations: lat0:lat1/lon0:lon1"
@@ -54,9 +54,9 @@ then
   exit -1
 fi
 
-phase=$(echo $twin  | awk -F"/" '{print $1}')
-twin_b=$(echo $twin | awk -F"/" '{print $2}')
-twin_e=$(echo $twin | awk -F"/" '{print $3}')
+phase=$(echo ${twin%/*})
+twin_b=$(echo ${twin#*/} | awk -F":" '{print $1}')
+twin_e=$(echo ${twin#*/} | awk -F":" '{print $2}')
 
 if [ -z "$phase" -o -z "$twin_b" -o -z "$twin_e" ]
 then
