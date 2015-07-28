@@ -7,11 +7,12 @@
 usage(){
   echo
   echo "Syntax:"
-  echo "  $0 -x -50:500 -n -50:500 -s 10 -f \"bp co 0.01 0.2 n 4 p 2\" -d./ -t Profile -l list -o profile.ps"
+  echo "  $0 -x -50:500 -n -50:500 [-c] -s 10 -f \"bp co 0.01 0.2 n 4 p 2\" -d./ -t Profile -l list -o profile.ps"
   echo
   echo "Parameters:"
   echo "  -x  plot time range(begin:end)."
   echo "  -n  time range to normalize amplitude(begin:end)."
+  echo "  -c  clip the y value."
   echo "  -s  slowness(s/deg) for reduced time."
   echo "  -a  align the traces at the specified SAC header, e.g. t1."
   echo "  -f  sac filter command."
@@ -30,6 +31,7 @@ plot_range=-50:500
 norm_range=$plot_range
 slowness=10 # s/deg
 align_sacHD=
+CLIP=0
 SHIFT_ID=0
 sac_filter="bp co 0.01 0.2 n 4 p 2"
 sac_dir=./
@@ -38,11 +40,12 @@ sac_list=list
 ps=profile.ps
 
 # parse options
-while getopts x:n:s:a:f:d:t:l:o:h name
+while getopts x:n:cs:a:f:d:t:l:o:h name
 do
   case $name in
   x)  plot_range="$OPTARG";;
   n)  norm_range="$OPTARG";;
+  c)  CLIP=1;;
   s)  slowness="$OPTARG";;
   a)  align_sacHD="$OPTARG";;
   f)  sac_filter="$OPTARG";;
@@ -69,9 +72,9 @@ fi
 
 if [ $SHIFT_ID -eq 0 ]
 then
-  echo "#Command: $0 -x $plot_range -n $norm_range -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
+  echo "#Command: $0 -x $plot_range -n $norm_range -c $CLIP -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
 else
-  echo "#Command: $0 -x $plot_range -n $norm_range -a $align_sacHD -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
+  echo "#Command: $0 -x $plot_range -n $norm_range -c $CLIP -a $align_sacHD -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
 fi
 
 plot_begin=${plot_range%:*}
@@ -103,8 +106,8 @@ fi
 cd $wkdir
 ntrace=$(cat $data_list | wc -l)
 
-ymin=0
-ymax=$(( $ntrace + 1 ))
+ymin=-0.5
+ymax=$(echo $ntrace 1.5 | awk '{print $1+$2}')
 
 # make y-axis annotation 
 awk '{printf "%d a %4.1f\n", NR,$4}' $data_list > $tmp_dir/y-annot.txt
@@ -155,8 +158,14 @@ EOF
 
   yscale=$(awk '$1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2}; END{if(n==0) n=1; print 1/n}' b=$norm_begin e=$norm_end $tmp_dir/xy.txt)
 
-  awk '{print $1, a*$2+y}' a=$yscale y=$n $tmp_dir/xy.txt |\
-    gmt psxy -J -R -O -K -P >> $ps
+  if [ $CLIP -eq 1 ]
+  then
+    awk '{b=a*$2; if(b>1.5||b<-1.5){print $1,"NAN"} else{print $1,b+y}}' a=$yscale y=$n $tmp_dir/xy.txt |\
+      gmt psxy -J -R -O -K -P >> $ps
+  else
+    awk '{print $1,a*$2+y}' a=$yscale y=$n $tmp_dir/xy.txt |\
+      gmt psxy -J -R -O -K -P >> $ps
+  fi
 
   echo $plot_end $n ${knetwk}.${kstnm} $az |\
     awk '{printf "%f %f %s (%03d) ",$1,$2,$3,$4}' |\
