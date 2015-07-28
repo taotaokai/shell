@@ -156,7 +156,7 @@ EOF
     tr -s " " "\n" |\
     awk '{print t0+NR*dt, $1}' t0=$t0 dt=$dt > $tmp_dir/xy.txt
 
-  yscale=$(awk '$1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2}; END{if(n==0) n=1; print 1/n}' b=$norm_begin e=$norm_end $tmp_dir/xy.txt)
+  yscale=$(awk '$1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2}; END{if(n==0) n=1; print 0.5/n}' b=$norm_begin e=$norm_end $tmp_dir/xy.txt)
 
   if [ $CLIP -eq 1 ]
   then
