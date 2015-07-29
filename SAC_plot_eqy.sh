@@ -96,10 +96,10 @@ data_list=$tmp_dir/data_list
 cd $sac_dir
 if [ $SHIFT_ID -eq 0 ]
 then
-  saclst knetwk kstnm gcarc az o f $(cat $sac_list) | sort -k4 -n |\
+  saclst knetwk kstnm gcarc az o f $(cat $wkdir/$sac_list) | sort -k4 -n |\
     awk '{printf "%s %s %s %f %f %f\n",$1,$2,$3,$4,$5,-1*(v*$4 + $6)}' v=$slowness > $data_list 
 else
-  saclst knetwk kstnm gcarc az $align_sacHD f $(cat $sac_list) | sort -k4 -n |\
+  saclst knetwk kstnm gcarc az $align_sacHD f $(cat $wkdir/$sac_list) | sort -k4 -n |\
     awk '{printf "%s %s %s %f %f %f\n",$1,$2,$3,$4,$5,-1*$6}' > $data_list 
 fi
 
