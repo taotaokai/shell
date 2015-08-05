@@ -7,12 +7,14 @@
 usage(){
   echo
   echo "Syntax:"
-  echo "  $0 -x o/-50:500 -n \"\" -s 0 -c -1 -f \"\" -l list -p \"\" -t \"\" -o profile.ps"
+  echo "  $0 -x o/-50:500 -n \"\" -a 1 -s 0 -c -1 -f \"\" -l list -p \"\" -t \"\" -o profile.ps"
   echo
   echo "Parameters:"
-  echo "  -x  time range(second) of plot (reference/begin:end). "
-  echo "  -n  time range(second) to calculate the normalization amplitude (reference/begin:end). "
+  echo "  -x  time window(seconds) of plot (reference/begin:end). "
+  echo "      reference is sac header, e.g. o, t0, t1 etc. "
+  echo "  -n  time window to calculate the normalization amplitude (reference/begin:end). "
   echo "      If not specified the whole trace is normalized. "
+  echo "  -a  normalization amplitude (default 1). "
   echo "  -s  slowness(s/deg) to calculate the reduce time. "
   echo "  -c  clip amplitude (no clip if < 0). "
   echo "  -f  SAC command to manipulate the data (e.g. bp co 0.02 0.2 n 4 p 2) "
@@ -30,8 +32,9 @@ usage(){
 #defaults
 plot_xlim=o/-50:500
 norm_xlim=
+norm_amp=1
 slowness=0
-clip=1
+clip=-1
 sac_macro=
 sac_list=list
 prefix=
@@ -39,11 +42,12 @@ plot_title="TITLE"
 ps=profile.ps
 
 # parse options
-while getopts x:n:s:c:f:l:p:t:o:h name
+while getopts x:n:a:s:c:f:l:p:t:o:h name
 do
   case $name in
   x)  plot_xlim="$OPTARG";;
   n)  norm_xlim="$OPTARG";;
+  a)  norm_amp="$OPTARG";;
   s)  slowness="$OPTARG";;
   c)  clip="$OPTARG";;
   f)  sac_macro="$OPTARG";;
@@ -61,13 +65,19 @@ then
   usage
 fi
 
-echo "#Command: $0 -x $plot_xlim -n $norm_xlim -s $slowness -c $clip -f \"$sac_macro\" -l $sac_list -p \"$prefix\" -t \"$plot_title\" -o $ps"
+echo "#Command: $0 -x $plot_xlim -n $norm_xlim -a $norm_amp -s $slowness -c $clip -f \"$sac_macro\" -l $sac_list -p \"$prefix\" -t \"$plot_title\" -o $ps"
 
 # further parse arguments
 plot_ref=${plot_xlim%/*}
 tmpvar=${plot_xlim#*/}
 plot_b=${tmpvar%:*}
 plot_e=${tmpvar#*:}
+tmpvar=$(echo "($plot_e - $plot_b)<0" | bc)
+if [ $tmpvar -eq 1 ]
+then
+  echo "[Error] -x invalid plot time range."
+  usage
+fi
 
 if [ ! -z "$norm_xlim" ]
 then
@@ -76,6 +86,12 @@ then
   tmpvar=${norm_xlim#*/}
   norm_b=${tmpvar%:*}
   norm_e=${tmpvar#*:}
+  tmpvar=$(echo "($norm_e - $norm_b)<0" | bc)
+  if [ $tmpvar -eq 1 ]
+  then
+    NORM_WHOLE_TRACE=1
+    echo "[WARN] -n invalid normalization time range, use whole trace."
+  fi
 else
   NORM_WHOLE_TRACE=1
   norm_ref=o
@@ -143,13 +159,14 @@ EOF
 
   if [ $NORM_WHOLE_TRACE -eq 0 ]
   then
-    yscale=$(awk 'BEGIN{o=t0-v;b=b+o;e=e+o} \
+    yscale=$(awk -v t0=$norm_t0 -v v=$time_shift -v b=$norm_b -v e=$norm_e -v a=$norm_amp \
+      'BEGIN{o=t0+v;b=b+o;e=e+o} \
       $1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2} \
-      END{if(n==0) n=1; print 0.5/n}' \
-      t0=$norm_t0 v=$time_shift b=$norm_b e=$norm_e $tmp_dir/xy.txt)
+      END{if(n==0) n=1; print a*0.5/n}' $tmp_dir/xy.txt)
   else
-    yscale=$(awk '{if($2<0) $2=-1*$2; if($2>n) n=$2} \
-      END{if(n==0) n=1; print 0.5/n}' $tmp_dir/xy.txt)
+    yscale=$(awk -v a=$norm_amp \
+      '{if($2<0) $2=-1*$2; if($2>n) n=$2} \
+      END{if(n==0) n=1; print a*0.5/n}' $tmp_dir/xy.txt)
   fi
 
   awk '{b=a*$2; if(c>0&&(b>c||b<-c)){print $1,"NAN"} else{print $1,b+y}}' \
