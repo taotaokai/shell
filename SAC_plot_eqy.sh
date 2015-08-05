@@ -7,51 +7,49 @@
 usage(){
   echo
   echo "Syntax:"
-  echo "  $0 -x -50:500 -n -50:500 [-c] -s 10 -f \"bp co 0.01 0.2 n 4 p 2\" -d./ -t Profile -l list -o profile.ps"
+  echo "  $0 -x o/-50:500 -n \"\" -s 0 -c -1 -f \"\" -l list -p \"\" -t \"\" -o profile.ps"
   echo
   echo "Parameters:"
-  echo "  -x  plot time range(begin:end)."
-  echo "  -n  time range to normalize amplitude(begin:end)."
-  echo "  -c  clip the y value."
-  echo "  -s  slowness(s/deg) for reduced time."
-  echo "  -a  align the traces at the specified SAC header, e.g. t1."
-  echo "  -f  sac filter command."
-  echo "  -d  sac data directory."
-  echo "  -t  string of title."
-  echo "  -l  list of sac files."
-  echo "  -o  output PS file."
+  echo "  -x  time range(second) of plot (reference/begin:end). "
+  echo "  -n  time range(second) to calculate the normalization amplitude (reference/begin:end). "
+  echo "      If not specified the whole trace is normalized. "
+  echo "  -s  slowness(s/deg) to calculate the reduce time. "
+  echo "  -c  clip amplitude (no clip if < 0). "
+  echo "  -f  SAC command to manipulate the data (e.g. bp co 0.02 0.2 n 4 p 2) "
+  echo "  -l  list of SAC files to plot. "
+  echo "  -p  prefix to the file names in file -l. "
+  echo "  -t  title string of the plot. "
+  echo "  -o  output PS file. "
   echo
+  echo "Description:"
   exit -1
 }
 
 #====== read parameters
 
 #defaults
-plot_range=-50:500
-norm_range=$plot_range
-slowness=10 # s/deg
-align_sacHD=
-CLIP=0
-SHIFT_ID=0
-sac_filter="bp co 0.01 0.2 n 4 p 2"
-sac_dir=./
-title="Profile"
+plot_xlim=o/-50:500
+norm_xlim=
+slowness=0
+clip=1
+sac_macro=
 sac_list=list
+prefix=
+plot_title="TITLE"
 ps=profile.ps
 
 # parse options
-while getopts x:n:cs:a:f:d:t:l:o:h name
+while getopts x:n:s:c:f:l:p:t:o:h name
 do
   case $name in
-  x)  plot_range="$OPTARG";;
-  n)  norm_range="$OPTARG";;
-  c)  CLIP=1;;
+  x)  plot_xlim="$OPTARG";;
+  n)  norm_xlim="$OPTARG";;
   s)  slowness="$OPTARG";;
-  a)  align_sacHD="$OPTARG";;
-  f)  sac_filter="$OPTARG";;
-  d)  sac_dir="$OPTARG";;
-  t)  title="$OPTARG";;
+  c)  clip="$OPTARG";;
+  f)  sac_macro="$OPTARG";;
   l)  sac_list="$OPTARG";;
+  p)  prefix="$OPTARG";;
+  t)  plot_title="$OPTARG";;
   o)  ps="$OPTARG";;
   [h,?])  usage; exit -1
   esac
@@ -63,29 +61,29 @@ then
   usage
 fi
 
-if [ ! -z "$align_sacHD" ]
+echo "#Command: $0 -x $plot_xlim -n $norm_xlim -s $slowness -c $clip -f \"$sac_macro\" -l $sac_list -p \"$prefix\" -t \"$plot_title\" -o $ps"
+
+# further parse arguments
+plot_ref=${plot_xlim%/*}
+tmpvar=${plot_xlim#*/}
+plot_b=${tmpvar%:*}
+plot_e=${tmpvar#*:}
+
+if [ ! -z "$norm_xlim" ]
 then
-  SHIFT_ID=1 # align time by sac header
+  NORM_WHOLE_TRACE=0
+  norm_ref=${norm_xlim%/*}
+  tmpvar=${norm_xlim#*/}
+  norm_b=${tmpvar%:*}
+  norm_e=${tmpvar#*:}
 else
-  SHIFT_ID=0 # reduced time by linear moveout
+  NORM_WHOLE_TRACE=1
+  norm_ref=o
+  norm_b=0
+  norm_e=0
 fi
-
-if [ $SHIFT_ID -eq 0 ]
-then
-  echo "#Command: $0 -x $plot_range -n $norm_range -c $CLIP -s $s -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
-else
-  echo "#Command: $0 -x $plot_range -n $norm_range -c $CLIP -a $align_sacHD -f \"$sac_filter\" -d $sac_dir -t \"$title\" -l $sac_list -o $ps"
-fi
-
-plot_begin=${plot_range%:*}
-plot_end=${plot_range#*:}
-
-norm_begin=${norm_range%:*}
-norm_end=${norm_range#*:}
 
 #====== GMT plot
-
-wkdir=$(pwd)
 
 # temporary directory
 tmp_dir=$(mktemp -d)
@@ -93,19 +91,11 @@ tmp_dir=$(mktemp -d)
 # get station metadata 
 data_list=$tmp_dir/data_list
 
-cd $sac_dir
-if [ $SHIFT_ID -eq 0 ]
-then
-  saclst knetwk kstnm gcarc az o f $(cat $wkdir/$sac_list) | sort -k4 -n |\
-    awk '{printf "%s %s %s %f %f %f\n",$1,$2,$3,$4,$5,-1*(v*$4 + $6)}' v=$slowness > $data_list 
-else
-  saclst knetwk kstnm gcarc az $align_sacHD f $(cat $wkdir/$sac_list) | sort -k4 -n |\
-    awk '{printf "%s %s %s %f %f %f\n",$1,$2,$3,$4,$5,-1*$6}' > $data_list 
-fi
+saclst knetwk kstnm gcarc az $plot_ref $norm_ref \
+  f $(awk '{printf "%s%s\n",v,$0}' v="$prefix" $sac_list) | sort -k4 -n |\
+  awk '{printf "%s %s %s %f %f %f %f\n",$1,$2,$3,$4,$5,-1*(v*$4+$6),$7}' v=$slowness > $data_list 
 
-cd $wkdir
 ntrace=$(cat $data_list | wc -l)
-
 ymin=-0.5
 ymax=$(echo $ntrace 1.5 | awk '{print $1+$2}')
 
@@ -113,37 +103,32 @@ ymax=$(echo $ntrace 1.5 | awk '{print $1+$2}')
 awk '{printf "%d a %4.1f\n", NR,$4}' $data_list > $tmp_dir/y-annot.txt
 
 # basemap
-if [ $SHIFT_ID -eq 0 ]
-then
-  xlabel="time - $s * dist (s)"
-else
-  xlabel="time after $align_sacHD (s)"
-fi
+xlabel="time after $plot_ref - ${slowness}*dist (s)"
 
 gmt psbasemap \
   -JX6i/9i \
-  -BWSen+t"$title" \
+  -BWSen+t"$plot_title" \
   -By+l"dist (deg)" -Byc"$tmp_dir/y-annot.txt" \
   -Bxa+l"$xlabel" \
-  -R"$plot_begin/$plot_end/$ymin/$ymax" \
+  -R"$plot_b/$plot_e/$ymin/$ymax" \
   -P -K > $ps
 
 #plot each trace
 n=0
 cat $data_list |\
-while read sacfn knetwk kstnm gcarc az time_shift
+while read sacfn knetwk kstnm gcarc az time_shift norm_t0
 do
   n=$(( $n + 1 ))
 
   # SAC cut plot range
 sac<<EOF
-r dir $sac_dir $sacfn
+r $sacfn
 ch allt $time_shift
 rtr;taper
-$sac_filter
+$sac_macro
 interpolate d 0.1
 w dir $tmp_dir tmp.sac
-cut ${plot_begin} ${plot_end}
+cut ${plot_b} ${plot_e}
 r dir $tmp_dir tmp.sac
 w alpha dir $tmp_dir sac.txt
 q
@@ -156,18 +141,22 @@ EOF
     tr -s " " "\n" |\
     awk '{print t0+NR*dt, $1}' t0=$t0 dt=$dt > $tmp_dir/xy.txt
 
-  yscale=$(awk '$1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2}; END{if(n==0) n=1; print 0.5/n}' b=$norm_begin e=$norm_end $tmp_dir/xy.txt)
-
-  if [ $CLIP -eq 1 ]
+  if [ $NORM_WHOLE_TRACE -eq 0 ]
   then
-    awk '{b=a*$2; if(b>1.5||b<-1.5){print $1,"NAN"} else{print $1,b+y}}' a=$yscale y=$n $tmp_dir/xy.txt |\
-      gmt psxy -J -R -O -K -P >> $ps
+    yscale=$(awk 'BEGIN{o=t0-v;b=b+o;e=e+o} \
+      $1>=b&&$1<=e{if($2<0) $2=-1*$2; if($2>n) n=$2} \
+      END{if(n==0) n=1; print 0.5/n}' \
+      t0=$norm_t0 v=$time_shift b=$norm_b e=$norm_e $tmp_dir/xy.txt)
   else
-    awk '{print $1,a*$2+y}' a=$yscale y=$n $tmp_dir/xy.txt |\
-      gmt psxy -J -R -O -K -P >> $ps
+    yscale=$(awk '{if($2<0) $2=-1*$2; if($2>n) n=$2} \
+      END{if(n==0) n=1; print 0.5/n}' $tmp_dir/xy.txt)
   fi
 
-  echo $plot_end $n ${knetwk}.${kstnm} $az |\
+  awk '{b=a*$2; if(c>0&&(b>c||b<-c)){print $1,"NAN"} else{print $1,b+y}}' \
+    a=$yscale y=$n c=$clip $tmp_dir/xy.txt |\
+    gmt psxy -J -R -O -K -P >> $ps
+
+  echo $plot_e $n ${knetwk}.${kstnm} $az |\
     awk '{printf "%f %f %s (%03d) ",$1,$2,$3,$4}' |\
     gmt pstext -J -R -F+f8,+jLM -D0.3c/0 -N -P -O -K >> $ps
 
