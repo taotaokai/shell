@@ -3,11 +3,9 @@
 # create CMTSOLUTION file from GCMT ndk file for the given event gcmt-ID
 
 #====== command line args
-evid=${1:?evid not set}
-
-outfile=${2:-${evid}.CMTSOLUTION}
-
-ndk_file=${3:-GCMT_1976-NOW.ndk}
+evid=${1:?[arg] need evid}
+ndk_file=${2:?[arg] need GCMT_1976-NOW.ndk}
+outfile=${3:?[arg] need out filename}
 
 #====== 
 tmp_ndk=$(mktemp)
