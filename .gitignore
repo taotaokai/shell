@@ -1,0 +1,22 @@
+# other files
+others/
+bak/
+old/
+test/
+
+## Build time
+#bin/
+#obj/
+
+# header files are auto-generated during compilation of specfed3d_globe
+# setup/*.h OUTPUT_FILES/values_from_mesher.h
+# you should use the header files for your own application
+#include/*.h
+
+# Trash files
+.*swp
+.*swo
+*~
+*.o
+*.so
+*.pyc
