@@ -174,6 +174,4 @@ do
     echo
     wget --post-file=$dataselect_list "$str_link" -O $mseed_file
 
-    exit
-
 done
