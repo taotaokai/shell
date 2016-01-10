@@ -16,7 +16,7 @@ function usage(){
     echo "  -C Specify catalog, e.g. ANF GCMT TEST ISC UofW NEIC PDE"
     echo "  -O Specify the output file."
     echo ======================================
-    echo "Example: $0 -R b/122/126/43.5/46 -T 2013-11-01/2013-12-01 -M 5.5/8.3 -D 100/1000 -C GCMT -O events"
+    echo "Example: $0 -R b/20/60/90/150 -T 2009-01-01 -M 5.5 -D 100 -C GCMT -O -"
     exit 1
 }
 
