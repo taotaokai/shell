@@ -107,7 +107,7 @@ do
     # save event info
     echo "$event_line" > $event_dir/data/event.txt
 
-    #------ get available channels
+    #------ get available stations 
     echo
     echo "[LOG] ------ query seismic stations"
     echo
