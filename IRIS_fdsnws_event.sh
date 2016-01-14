@@ -1,24 +1,32 @@
 #!/bin/bash
 
-#get earthquake catalog from http://service.iris.edu/fdsnws/event/1/query?
-#USAGE: $0 -R lon0/lon1/lat0/lat1 -T start/end -M mag0/mag1
+usage(){
+cat<<EOF
+NAME 
+    IRIS_fdsnws_event - query event info from IRIS fdsnws web service
 
-function usage(){
-    echo ======================================
-    echo "usage: $0 -R [search region]  -T <start-time>/<end-time> -M <minMag>/<maxMag> -O <file>"
-    echo --------------------------------------
-    echo "  -R Specify a box search region."
-    echo "      box region: [b<south>/<north>/<west>/<east>], Example: b/-122/-121.5/46.8/46.9"
-    echo "      radial region: [r<lat0>/<lon0>/<minRadius>/<maxRadius>], Radius(degree), Example: r/-120/40/1.0/5.0."
-    echo "  -T Specify the temporal range. Example: 2012-11-29T00:00:00/2012-12-01T00:00:00, 2012-11-29 is equivalent to 2012-11-29T00:00:00"
-    echo "  -M Specify the magnitude range. Example: -0.1/8.3"
-    echo "  -D Specify depth range. Example: 100/1000"
-    echo "  -C Specify catalog, e.g. ANF GCMT TEST ISC UofW NEIC PDE"
-    echo "  -O Specify the output file."
-    echo ======================================
-    echo "Example: $0 -R b/20/60/90/150 -T 2009-01-01 -M 5.5 -D 100 -C GCMT -O -"
-    exit 1
+SYNOPSIS
+    IRIS_fdsnws_event -R [search region]  -T <start-time>/<end-time> -M <minMag>/<maxMag> -O <file>"
+
+DESCRIPTION 
+    -R Specify a box search region.  
+        box region: [b<south>/<north>/<west>/<east>] e.g. b/-122/-121.5/46.8/46.9
+        radial region: [r<lat0>/<lon0>/<minRadius>/<maxRadius>], Radius(degree), e.g. r/-120/40/1.0/5.0
+    -T Specify the temporal range, e.g. 2012-11-29T00:00:00/2012-12-01T00:00:00
+        2012-11-29 is equivalent to 2012-11-29T00:00:00
+    -M Specify the magnitude range, e.g. -0.1/8.3
+    -D Specify depth range, e.g. 100/1000
+    -C Specify catalog, e.g. ANF GCMT TEST ISC UofW NEIC PDE
+    -O Specify the output file name, defaults to stdout
+
+EXAMPLE
+    IRIS_fdsnws_event -R b/20/60/90/150 -T 2009-01-01 -M 5.5 -D 100 -C GCMT -O -
+
+EOF
 }
+
+# base url
+fdsnws_event="http://service.iris.edu/fdsnws/event/1/query"
 
 # default parameter values
 R=b/20/60/90/150
@@ -50,8 +58,6 @@ echo "#This run: $0 -T$T -M$M -R$R -D$depth -C$catalog -O$O"
 # form the query links 
 # keywords: [starttime,endtime,minlatitude,maxlatitude,minlongitude,maxlongitude,latitude,longitude,maxradius,minradius,mindepth,maxdepth,minmagnitude,maxmagnitude,magnitudetype]
 
-strHead="http://service.iris.edu/fdsnws/event/1/query?"
-
 strT=$(echo $T | awk -F"/" '\
     NF==2{printf "starttime=%s&endtime=%s",$1,$2}; \
     NF==1{printf "starttime=%s",$1}')
@@ -73,7 +79,7 @@ strD=$(echo $depth | awk -F"/" '\
 
 strC="catalog=$catalog"
 
-strLink="${strHead}&${strT}&${strM}&${strR}&${strD}&${strC}&format=text"
+strLink="${fdsnws_event}?${strT}&${strM}&${strR}&${strD}&${strC}&format=text"
 
 wget $strLink -O $O
 
