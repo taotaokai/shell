@@ -53,7 +53,7 @@ tmp_sacm=$(mktemp)
 while read sacpz_file
 do
 
-    echo ${sacpz_file}
+    echo ====== ${sacpz_file}
 
     sacpz_fn=${sacpz_file##.*/}
 
@@ -65,7 +65,7 @@ do
         echo "net|sta|loc|cha|2000-01-01T00:00:00|2000-01-01T00:00:00|" > $tmp_list
     else
         # annotated sacpz
-        sed "/^[\s]*$/d" IU.INCN.00.BHZ |\
+        sed "/^[\s]*$/d" $sacpz_file |\
             grep -A6 "* NETWORK" |\
             sed "/^\*/s/$/|/;s/^\*[^:]*://" |\
             awk 'BEGIN{RS="--"}{printf "%s%s%s%s%s%s\n", $1,$2,$3,$4,$6,$7}' \
