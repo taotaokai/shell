@@ -29,11 +29,11 @@ EOF
 fdsnws_event="http://service.iris.edu/fdsnws/event/1/query"
 
 # default parameter values
-R=b/20/60/90/150
+R=b/-90/90/-180/180
 T=2009-01-01
 M=5.5
 depth=100
-catalog=GCMT
+catalog=
 O=-
 
 # parse options
@@ -77,9 +77,14 @@ strD=$(echo $depth | awk -F"/" '\
     NF==2{printf "mindepth=%s&maxdepth=%s",$1,$2}; \
     NF==1{printf "mindepth=%s",$1}')
 
-strC="catalog=$catalog"
+if [ x"$catalog" != x ]
+then
+    strC="catalog=$catalog"
+fi
 
 strLink="${fdsnws_event}?${strT}&${strM}&${strR}&${strD}&${strC}&format=text"
+
+echo "# $strLink"
 
 wget $strLink -O $O
 
