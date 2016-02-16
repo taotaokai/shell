@@ -26,16 +26,17 @@ out_dir=$wkdir/${7:-${outtype}}
 # log file
 log_file=$wkdir/desacpz_to_${outtype}.log
 
-echo "#LOG created on $(date +%Y-%m-%dT%H:%M:%S)" > $log_file
-echo "#PWD: $HOSTNAME:$(pwd)" >> $log_file
-echo "#COMMAND: $0 $@" >> $log_file
-echo "#Parameter: wkdir= $wkdir " >> $log_file
-echo "#Parameter: outtype= $outtype " >> $log_file
-echo "#Parameter: freqlim= $freqlim " >> $log_file
-echo "#Parameter: channel_list= $channel_list " >> $log_file
-echo "#Parameter: sac_dir= $sac_dir" >> $log_file
-echo "#Parameter: sacpz_dir= $sacpz_dir" >> $log_file
-echo "#Parameter: out_dir= $out_dir" >> $log_file
+echo "# LOG created on $(date +%Y-%m-%dT%H:%M:%S)" > $log_file
+echo "# PWD: $HOSTNAME:$(pwd)" >> $log_file
+echo "# COMMAND: $0 $@" >> $log_file
+echo "# Parameters: " >> $log_file
+echo "#   wkdir= $wkdir " >> $log_file
+echo "#   outtype= $outtype " >> $log_file
+echo "#   freqlim= $freqlim " >> $log_file
+echo "#   channel_list= $channel_list " >> $log_file
+echo "#   sac_dir= $sac_dir" >> $log_file
+echo "#   sacpz_dir= $sacpz_dir" >> $log_file
+echo "#   out_dir= $out_dir" >> $log_file
 
 
 #====== create directories if not exist
@@ -51,7 +52,7 @@ fi
 
 #====== SAC
 echo >> $log_file
-echo "#Run SAC commands" >> $log_file
+echo "# Run SAC commands" >> $log_file
 echo >> $log_file
 
 tmp_log=$(mktemp)
@@ -66,11 +67,11 @@ do
     # get corresponding sac/sacpz files
     sac_file=(${sac_dir}/*${channel_id}.*SAC)
     if [ ! -f "${sac_file[0]}" ]; then
-        echo "[WARNING] SKIP: SAC file not found for ${channel_id}"
+        echo "[WARN] SAC file not found for ${channel_id}, SKIP"
         continue
     fi
     if [ ${#sac_file[@]} -gt 1 ]; then
-        echo "[WARNING] SKIP: segmented SAC files found for ${channel_id}"
+        echo "[WARN] Segmented SAC files found for ${channel_id}, SKIP"
         echo "${sac_file[@]}"
         continue
     fi
@@ -78,11 +79,11 @@ do
     #sacpz_file=(${sacpz_dir}/SAC_PZs_${net}_${sta}_${chan}_${loc}*)
     sacpz_file=(${sacpz_dir}/${channel_id}*)
     if [ ! -f "${sacpz_file[0]}" ]; then
-        echo "[WARNING] SKIP: SACPZ file not found for ${channel_id}"
+        echo "[WARN] SACPZ file not found for ${channel_id}, SKIP"
         continue
     fi
     if [ ${#sacpz_file[@]} -gt 1 ]; then
-        echo "[WARNING] SKIP: more than one SACPZ file found for ${channel_id}"
+        echo "[WARN] More than one SACPZ file found for ${channel_id}, SKIP"
         echo "${sacpz_file[@]}"
         continue
     fi
@@ -101,8 +102,9 @@ q
 EOF
     # check for SAC error
     if grep -Fiq ERROR $tmp_log; then
-        echo "[WARNING] SAC failed removing SACPZ for ${channel_id}"
-        if [ -f $out_file ];then
+        echo "[WARN] SAC failed to remove SACPZ for ${channel_id}, output REMOVED"
+        cat $tmp_log
+        if [ -f $out_file ]; then
             rm $out_file
         fi
         continue
@@ -113,10 +115,10 @@ done >> $log_file 2>&1
 rm $tmp_log
 
 
-#====== print out error/warning messages
+#====== print out error/WARN messages
 echo >> $log_file
-echo "#Finished on $(date +%Y-%m-%dT%H:%M:%S)" >> $log_file
+echo "# Finished on $(date +%Y-%m-%dT%H:%M:%S)" >> $log_file
 
-echo "# Error/Warning encoutered:"
+echo "# ERROR/WARNING encoutered:"
 echo
 grep -i -e "error" -e "warn" $log_file
