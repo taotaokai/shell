@@ -3,12 +3,13 @@
 usage(){
 cat<<EOF
 NAME 
-    IRIS_fdsnws_event - query event info from IRIS fdsnws web service
+    IRIS_fdsnws_event - a shell wrapper to IRIS web service to search event info.
 
 SYNOPSIS
     IRIS_fdsnws_event -R [search region]  -T <start-time>/<end-time> -M <minMag>/<maxMag> -O <file>"
 
 DESCRIPTION 
+
     -R Specify a box search region.  
         box region: [b<south>/<north>/<west>/<east>] e.g. b/-122/-121.5/46.8/46.9
         radial region: [r<lat0>/<lon0>/<minRadius>/<maxRadius>], Radius(degree), e.g. r/-120/40/1.0/5.0
