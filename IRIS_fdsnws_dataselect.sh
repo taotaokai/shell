@@ -50,18 +50,38 @@ twin_specs=p,P/-500/1500
 out_dir=$wkdir
 
 # parse options
-while getopts s:t:o:h name
+while getopts ":s:t:o:h" opt
 do
-  case $name in
-  s)  station_specs="$OPTARG";;
-  t)  twin_specs="$OPTARG";;
-  o)  out_dir=$(readlink -f "$OPTARG");;
-  [h,?])  usage; exit -1
+  case $opt in
+  s)  
+    station_specs="$OPTARG"
+    ;;
+  t)  
+    twin_specs="$OPTARG"
+    ;;
+  o)  
+    out_dir=$(readlink -f "$OPTARG")
+    ;;
+  :)
+    echo "Option -$OPTARG requires an argument." >&2
+    usage
+    exit 1
+    ;;
+  h)
+    usage
+    exit 1
+    ;;
+  \?)
+    echo "Invalid option: -$OPTARG" >&2
+    usage
+    exit 1
+    ;;
   esac
 done
 
-# get all arguments
+# get all mass-arguments
 shift $((OPTIND-1))
+
 event_list=${1:?[arg] need gcmt_catalog}
 event_list=$(readlink -f $event_list)
 
@@ -89,9 +109,13 @@ fi
 echo "[LOG] wkdir=$wkdir"
 echo "[LOG] $0 $event_list -s $station_specs -t $twin_specs -o $out_dir"
 
-old_IFS="$IFS"
-IFS=$'\n' 
-for event_line in $(grep -v "^[ \t]*#" $event_list)
+tmp_list=$(mktemp -p $wkdir)
+
+#old_IFS="$IFS"
+#IFS=$'\n' 
+
+grep -v "^[ \t]*#" $event_list |\
+while read event_line
 do
   echo
   echo "[LOG] ====== $event_line"
@@ -117,33 +141,84 @@ do
   # save event info
   echo "$event_line" > $event_dir/data/event.txt
 
-  #------ get available stations 
-  echo
-  echo "[LOG] ------ query seismic stations"
-  echo
-  station_list=$event_dir/data/station.txt
+# #------ get available stations 
+# echo
+# echo "[LOG] ------ query seismic stations"
+# echo
+# station_list=$event_dir/data/station.txt
   # channel operating time range (start 1 day before and end 1 day after origin time)
   startbefore=$(date -ud "$evodate -1 days" +%Y-%m-%dT%H:%M:%S)
   endafter=$(date -ud "$evodate 1 days" +%Y-%m-%dT%H:%M:%S)
   str_twin="startbefore=${startbefore}&endafter=${endafter}"
-  # query stations
-  echo "[LOG] get station list"
-  str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=station&format=text"
-  echo "[LOG] wget $str_link -O $station_list"
-  wget "$str_link" -O $station_list
-  # check station number
-  nsta=$(awk 'END{print NR}' $station_list)
-  if [ $nsta -lt 1 ]; then
-    echo "[WARN] No available stations! SKIP this event."
-    continue
-  fi
-  echo "[LOG] stations found: $nsta"
-  # query channels 
+# # query stations
+# echo "[LOG] get station list"
+# str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=station&format=text"
+# echo "[LOG] wget $str_link -O $station_list"
+# wget "$str_link" -O $station_list
+# # check station number
+# nsta=$(awk 'END{print NR}' $station_list)
+# if [ $nsta -lt 1 ]; then
+#   echo "[WARN] No available stations! SKIP this event."
+#   continue
+# fi
+# echo "[LOG] stations found: $nsta"
+
+  #------ get channel list
+  # query channels
   channel_list=$event_dir/data/channel.txt
   echo "[LOG] get channel list"
   str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=channel&format=text"
   echo "[LOG] wget $str_link -O $channel_list"
   wget "$str_link" -O $channel_list
+
+  # remove dumplicated sampling rates, e.g. HHZ and BHZ
+  seedID_list=$event_dir/data/seed_id.txt
+  awk -F"|" '$1!~/#/{sub(/^./,".",$4); printf "%s|%s|%s|%s|\n",$1,$2,$3,$4}' \
+    $channel_list | sort -u > $seedID_list
+
+  cat $seedID_list |\
+  while read seed_id
+  do
+    grep "^$seed_id" $channel_list > $tmp_list
+    num_chans=$(awk 'END{print NR}' $tmp_list)
+    if [ "$num_chans" -gt 1 ]
+    then
+      echo "[LOG] multiple sampling rates found for channel: $seed_id"
+      cat $tmp_list
+      sed -i "s/^\($seed_id\)/#\1/" $channel_list
+      codes=$(awk -F"|" '{printf "%s ", substr($4,1,1)}' $tmp_list)
+      for c in B H C F
+      do
+        echo $codes | grep "$c" > /dev/null
+        if [ "$?" -eq 0 ]
+        then
+          chan_id=$(echo "$seed_id" | sed "s/\./$c/")
+          echo "[LOG] selected channel: $chan_id"
+          sed -i "/^#${chan_id}/s/^#//" $channel_list 
+          break
+        fi
+      done
+    fi
+  done
+
+  # remove stations with incomplete components, e.g. not all ?H[ENZ] or ?H[12Z] exist.
+  awk -F"|" '$1!~/#/{printf "%s|%s|%s|\n",$1,$2,$3}' \
+    $channel_list | sort -u |\
+  while read seed_id
+  do
+    cha=$(grep "^${seed_id}" $channel_list | awk -F"|" '{print $4}')
+    echo "$cha" | grep "Z" > /dev/null
+    if [ "$?" -ne 0 ]
+    then
+      echo "[WARN] incomplete components for ${cha}, SKIP"
+      sed -i "s/^\(${seed_id}\)/^#\1/"
+      continue
+    else
+
+
+    fi
+
+  done
 
   #------ generate data selection list
   echo
@@ -152,7 +227,8 @@ do
   dataselect_list=$event_dir/data/dataselect.txt
   cat /dev/null > $dataselect_list
 
-  for station_line in $(grep -v "^#" $station_list)
+  grep -v "^#" $station_list |\
+  while read station_line
   do
     # parse station info
     IFS='|' read -ra sta <<< "$station_line"
@@ -173,9 +249,12 @@ do
     t1=$(echo "$evoepoch + $twin_end + $ttp" | bc -l)
     starttime=$(date -u -d @$t0 +%Y-%m-%dT%H:%M:%S)
     endtime=$(date -u -d @$t1 +%Y-%m-%dT%H:%M:%S)
+    # get channel id
+    cha=$(grep "^${netwk}|${stnm}|" $channel_list |\
+      awk -F"|" '{print $4}' | sort -u | awk '{printf "%s,",$1}')
     # print data selection list 
-    printf "%-6s %-6s  *  BH?  %s  %s\n" \
-      $netwk $stnm $starttime $endtime \
+    printf "%-6s %-6s  *  %s  %s  %s\n" \
+      $netwk $stnm "${cha%,}" $starttime $endtime \
       >> $dataselect_list
   done
 
@@ -197,7 +276,8 @@ do
 
   sacpz_dir=$event_dir/sacpz
 
-  for line in $(grep -v "^#" $channel_list)
+  grep -v "^#" $channel_list |\
+  while read line
   do
     IFS='|' read -ra x <<< "$line"
 
@@ -228,5 +308,8 @@ do
   done
 
 done # for event_line in $(grep -v "^[ \t]*#" $event_list)
+
+#====== clear up
+rm $tmp_list
 
 #END
