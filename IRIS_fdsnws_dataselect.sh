@@ -38,6 +38,7 @@ DESCRIPTION
 NOTE
   1) TauP/bin/taup_time is called to calculate traveltime
   2) channel code is restricted to [FCHB]H?, i.e. only broadband high gain seismic data
+  3) complete 3 components are checked, i.e. must have all ?H[ENZ] or ?H[12Z].
 
 EOF
 }
@@ -111,9 +112,6 @@ echo "[LOG] $0 $event_list -s $station_specs -t $twin_specs -o $out_dir"
 
 tmp_list=$(mktemp -p $wkdir)
 
-#old_IFS="$IFS"
-#IFS=$'\n' 
-
 grep -v "^[ \t]*#" $event_list |\
 while read event_line
 do
@@ -141,30 +139,15 @@ do
   # save event info
   echo "$event_line" > $event_dir/data/event.txt
 
-# #------ get available stations 
-# echo
-# echo "[LOG] ------ query seismic stations"
-# echo
-# station_list=$event_dir/data/station.txt
+  #------ get channel list
+  echo "[LOG] ------ query seismic stations"
+
   # channel operating time range (start 1 day before and end 1 day after origin time)
   startbefore=$(date -ud "$evodate -1 days" +%Y-%m-%dT%H:%M:%S)
   endafter=$(date -ud "$evodate 1 days" +%Y-%m-%dT%H:%M:%S)
   str_twin="startbefore=${startbefore}&endafter=${endafter}"
-# # query stations
-# echo "[LOG] get station list"
-# str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=station&format=text"
-# echo "[LOG] wget $str_link -O $station_list"
-# wget "$str_link" -O $station_list
-# # check station number
-# nsta=$(awk 'END{print NR}' $station_list)
-# if [ $nsta -lt 1 ]; then
-#   echo "[WARN] No available stations! SKIP this event."
-#   continue
-# fi
-# echo "[LOG] stations found: $nsta"
 
-  #------ get channel list
-  # query channels
+  # retrive channel info from IRIS web service
   channel_list=$event_dir/data/channel.txt
   echo "[LOG] get channel list"
   str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=channel&format=text"
@@ -172,11 +155,8 @@ do
   wget "$str_link" -O $channel_list
 
   # remove dumplicated sampling rates, e.g. HHZ and BHZ
-  seedID_list=$event_dir/data/seed_id.txt
   awk -F"|" '$1!~/#/{sub(/^./,".",$4); printf "%s|%s|%s|%s|\n",$1,$2,$3,$4}' \
-    $channel_list | sort -u > $seedID_list
-
-  cat $seedID_list |\
+    $channel_list | sort -u |\
   while read seed_id
   do
     grep "^$seed_id" $channel_list > $tmp_list
@@ -185,7 +165,7 @@ do
     then
       echo "[LOG] multiple sampling rates found for channel: $seed_id"
       cat $tmp_list
-      sed -i "s/^\($seed_id\)/#\1/" $channel_list
+      sed -i "/^${seed_id}/s/^/#/" $channel_list
       codes=$(awk -F"|" '{printf "%s ", substr($4,1,1)}' $tmp_list)
       for c in B H C F
       do
@@ -201,21 +181,25 @@ do
     fi
   done
 
-  # remove stations with incomplete components, e.g. not all ?H[ENZ] or ?H[12Z] exist.
+  # remove stations with incomplete components, 
+  # e.g. not all ?H[ENZ] or ?H[12Z] exist.
   awk -F"|" '$1!~/#/{printf "%s|%s|%s|\n",$1,$2,$3}' \
     $channel_list | sort -u |\
   while read seed_id
   do
-    cha=$(grep "^${seed_id}" $channel_list | awk -F"|" '{print $4}')
-    echo "$cha" | grep "Z" > /dev/null
-    if [ "$?" -ne 0 ]
+    read -a cha <<< $(grep "^${seed_id}" $channel_list | awk -F"|" '{print $4}')
+
+    # band code/sampling rate
+    c=$(echo ${cha[0]:0:1})
+
+    if [ "${#cha[@]}" -ne 3 ] || [ "${cha[2]}" != "${c}HZ" ] || \
+       ( ( [ "${cha[0]}" != "${c}HE" ] || [ "${cha[1]}" != "${c}HN" ] ) && \
+         ( [ "${cha[0]}" != "${c}H1" ] || [ "${cha[1]}" != "${c}H2" ] ) )
     then
-      echo "[WARN] incomplete components for ${cha}, SKIP"
-      sed -i "s/^\(${seed_id}\)/^#\1/"
+      echo "[WARN] incorrect components found for ${seed_id}, SKIP"
+      echo "${cha[@]}"
+      sed -i "/^${seed_id}/s/^/#/" $channel_list
       continue
-    else
-
-
     fi
 
   done
