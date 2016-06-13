@@ -13,7 +13,7 @@ if [ x${outtype} != xdis ] && \
     exit -1
 fi
 
-freqlim=${3:-"0.009 0.01 30.0 35.0"}
+freqlim=${3:-"0.006 0.008 30.0 35.0"}
 
 channel_list=$wkdir/${4:-data/channel.txt}
 

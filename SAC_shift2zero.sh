@@ -9,27 +9,26 @@ DESCRIPTION
   shift sac time markers to make one header value zero.
 
 SYNOPSIS
-  SAC_shift2zero.sh < sac-files -t a
+  SAC_shift2zero.sh < sac-files <tmarker>
 
 PARAMETERS
-
-  -t a  specify the sac header name
+  <tmarker>  specify the sac header name
 
 EOF
   exit -1
 }
 
 # Default parameters
-HEAD=a
+HEAD=${1:?[arg] need header name (e.g. o, a, t1, etc)}
 
 # parse options
-while getopts t:h name
-do
-  case $name in
-  t)  HEAD="$OPTARG";;
-  [h,?])  selfdoc;;
-  esac
-done
+#while getopts t:h name
+#do
+#  case $name in
+#  t)  HEAD="$OPTARG";;
+#  [h,?])  selfdoc;;
+#  esac
+#done
 
 echo shift sac to align header \""$HEAD"\" to zero
 

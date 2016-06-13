@@ -38,7 +38,7 @@ DESCRIPTION
 NOTE
   1) TauP/bin/taup_time is called to calculate traveltime
   2) channel code is restricted to [FCHB]H?, i.e. only broadband high gain seismic data
-  3) complete 3 components are checked, i.e. must have all ?H[ENZ] or ?H[12Z].
+  3) completeness of 3 components are checked, i.e. must have all ?H[ENZ] or ?H[12Z].
 
 EOF
 }
@@ -60,7 +60,7 @@ do
   t)  
     twin_specs="$OPTARG"
     ;;
-  o)  
+  o)
     out_dir=$(readlink -f "$OPTARG")
     ;;
   :)
@@ -106,16 +106,9 @@ fi
 
 #====== get data for each event 
 
-# LOG
-echo "[LOG] wkdir=$wkdir"
-echo "[LOG] $0 $event_list -s $station_specs -t $twin_specs -o $out_dir"
-
 grep -v "^[ \t]*#" $event_list |\
 while read event_line
 do
-  echo
-  echo "[LOG] ====== $event_line"
-  echo
 
   #------ event info
   IFS='|' read -ra evt <<< "$event_line"
@@ -134,13 +127,19 @@ do
   cd $event_dir
   mkdir data mseed sacpz
 
+  #------ make log file 
+  log_file=$event_dir/IRIS_fdsnws_dataselect.log
+  echo "[LOG] ====== $event_line" >> $log_file
+  echo "[LOG] $0 $event_list -s $station_specs -t $twin_specs -o $out_dir" >> $log_file
+  echo "[LOG] wkdir=$wkdir" >> $log_file
+
   # save event info
   echo "$event_line" > $event_dir/data/event.txt
 
   #------ get channel list
-  echo
-  echo "[LOG] ------ get channel list"
-  echo
+  echo >> $log_file
+  echo "[LOG] ------ get channel list" >> $log_file
+  echo >> $log_file
 
   # channel operating time range (start 1 day before and end 1 day after origin time)
   startbefore=$(date -ud "$evodate -1 days" +%Y-%m-%dT%H:%M:%S)
@@ -149,45 +148,97 @@ do
 
   # retrive channel info from IRIS web service
   channel_list=$event_dir/data/channel.txt
-  echo "[LOG] get channel list"
+  echo >> $log_file
+  echo "[LOG] get channel list" >> $log_file
   str_link="${fdsnws_station}?${str_twin}&${geo_range}&channel=FH?,CH?,HH?,BH?&level=channel&format=text"
-  echo "[LOG] wget $str_link -O $channel_list"
-  wget "$str_link" -O $channel_list
+  echo >> $log_file
+  echo "[LOG] wget $str_link -O $channel_list" >> $log_file
+  wget "$str_link" -O $channel_list -a $log_file
 
   #------ check channel list
-  echo
-  echo "[LOG] ------ check channel list"
-  echo
+  echo >> $log_file
+  echo "[LOG] ------ check channel list" >> $log_file
+  echo >> $log_file
 
   #--- remove records with incomplete components,
   # e.g. not all ?H[ENZ] or ?H[12Z] exist.
-  echo
-  echo "[LOG] --- check completeness of components"
-  echo
+  echo >> $log_file
+  echo "[LOG] --- check completeness of components" >> $log_file
+  echo >> $log_file
 
-  awk -F"|" '$1!~/#/{c=substr($4,1,2); printf "%s|%s|%s|%s.|\n",$1,$2,$3,c}' \
+  awk -F"|" '$1!~/#/{c=substr($4,1,2); printf "%s|%s|%s|%s\n",$1,$2,$3,c}' \
     $channel_list | sort -u |\
   while read seed_id
   do
     comp=$(grep "^${seed_id}" $channel_list |\
       awk -F"|" '{print substr($4,3,1)}' | sort | awk '{printf "%s",$1}')
+    ncomp=$(echo -n "$comp" | wc -c)
 
-    # components should be either E,N,Z or 1,2,Z  
-    if [ "$comp" != "ENZ" ] && [ "$comp" != "12Z" ]
+    # discard stations which have less than 3 components
+    if [ ${ncomp} -lt 3 ]
     then
-      echo
-      echo "[WARN] incorrect components found for ${seed_id}"
-      grep "^${seed_id}" $channel_list
+      echo >> $log_file
+      echo "[WARN] incorrect components found for ${seed_id}" >> $log_file
+      grep "^${seed_id}" $channel_list >> $log_file
       sed -i "/^${seed_id}/s/^/#/" $channel_list
       continue
     fi
+    
+    # keep either ENZ or 12Z when only 3 components found
+    if [ ${ncomp} -eq 3 ] && [ "$comp" != "ENZ" ] && [ "$comp" != "12Z" ]
+    then
+      echo >> $log_file
+      echo "[WARN] incorrect components found for ${seed_id}" >> $log_file
+      grep "^${seed_id}" $channel_list >> $log_file
+      sed -i "/^${seed_id}/s/^/#/" $channel_list
+      continue
+    fi
+
+    # when more than 3 components found, keep ENZ or 12Z
+    if [ ${ncomp} -gt 3 ]
+    then
+      echo ${comp} | grep 'Z' > /dev/null
+      if [ "$?" -eq 0 ]
+      then
+        echo ${comp} | grep 'EN'  > /dev/null
+        if [ "$?" -eq 0 ]
+        then
+          sed -i "/^${seed_id}[12]|/s/^/#/" $channel_list
+          echo >> $log_file
+          echo "[WARN] keep ${seed_id}[ENZ] only" >> $log_file
+          continue
+        else
+          echo ${comp} | grep '12' > /dev/null
+          if [ "$?" -eq 0 ]
+          then
+            sed -i "/^${seed_id}[EN]|/s/^/#/" $channel_list
+            echo >> $log_file
+            echo "[WARN] keep ${seed_id}[12Z] only" >> $log_file
+            continue
+          else
+            echo >> $log_file
+            echo "[WARN] incomplete components found for ${seed_id}" >> $log_file
+            grep "^${seed_id}" $channel_list >> $log_file
+            sed -i "/^${seed_id}/s/^/#/" $channel_list
+            continue
+          fi
+        fi
+      else # Z does not exits
+        echo >> $log_file
+        echo "[WARN] incomplete components found for ${seed_id}" >> $log_file
+        grep "^${seed_id}" $channel_list >> $log_file
+        sed -i "/^${seed_id}/s/^/#/" $channel_list
+        continue
+      fi
+    fi
+
   done
 
   #--- remove records with multiple sampling rates (e.g. HHZ and BHZ)
   # keep the first one found in the order of B H C F
-  echo
-  echo "[LOG] --- check multiple sampling rates"
-  echo
+  echo >> $log_file
+  echo "[LOG] --- check multiple sampling rates" >> $log_file
+  echo >> $log_file
 
   awk -F"|" '$1!~/#/{c=substr($4,2,2); printf "%s|%s|%s|.%s|\n",$1,$2,$3,c}' \
     $channel_list | sort -u |\
@@ -197,9 +248,9 @@ do
       awk -F"|" '{print substr($4,1,1)}' | sort)
     if [ "${#band[@]}" -gt 1 ]
     then
-      echo
-      echo "[WARN] multiple band codes found for $seed_id"
-      grep "^${seed_id}" $channel_list
+      echo >> $log_file
+      echo "[WARN] multiple band codes found for $seed_id" >> $log_file
+      grep "^${seed_id}" $channel_list >> $log_file
       sed -i "/^${seed_id}/s/^/#/" $channel_list
       for code in B H C F
       do
@@ -208,7 +259,7 @@ do
         then
           seed_id=$(echo "$seed_id" | awk -F"|" -v c="$code" \
             '{x=substr($4,2,2); printf "%s|%s|%s|%s%s|",$1,$2,$3,c,x}')
-          echo "[WARN] only keep $seed_id"
+          echo "[WARN] only keep $seed_id" >> $log_file
           sed -i "/^#${seed_id}/s/^#//" $channel_list 
           break
         fi
@@ -218,9 +269,9 @@ do
 
   #--- remove multiple location codes 
   # keep the first one from the sorted list of location codes
-  echo
-  echo "[LOG] --- check multiple location codes"
-  echo
+  echo >> $log_file
+  echo "[LOG] --- check multiple location codes" >> $log_file
+  echo >> $log_file
 
   awk -F"|" '$1!~/#/{printf "%s|%s|[^|]*|%s|\n",$1,$2,$4}' \
     $channel_list | sort -u |\
@@ -230,9 +281,9 @@ do
       awk -F"|" '{if($3=="") $3="--"; print $3}' | sort -u)
     if [ "${#loc[@]}" -gt 1 ]
     then
-      echo
-      echo "[WARN] multiple location codes found for $seed_id"
-      grep "^${seed_id}" $channel_list
+      echo >> $log_file
+      echo "[WARN] multiple location codes found for $seed_id" >> $log_file
+      grep "^${seed_id}" $channel_list >> $log_file
       sed -i "/^${seed_id}/s/^/#/" $channel_list
       code=${loc[0]}
       if [ "$code" == "--" ]
@@ -242,14 +293,14 @@ do
       seed_id=$(echo "$seed_id" | awk -F"|" -v c="$code" \
         '{printf "%s|%s|%s|%s|",$1,$2,c,$5}')
       sed -i "/^#${seed_id}/s/^#//" $channel_list 
-      echo "[WARN] only keep ${seed_id}"
+      echo "[WARN] only keep ${seed_id}" >> $log_file
     fi
   done
 
   #------ generate data selection list
-  echo
-  echo "[LOG] ------ make data selection list"
-  echo
+  echo >> $log_file
+  echo "[LOG] ------ make data selection list" >> $log_file
+  echo >> $log_file
 
   dataselect_list=$event_dir/data/dataselect.txt
   cat /dev/null > $dataselect_list
@@ -263,7 +314,7 @@ do
         -sta $stla $stlo --time -ph $phase_name | head -n1 | awk '{print $1}')
     if [ -z "$ttp" ]
     then
-      echo "[ERROR] taup_time failed to get travaltime for $net $sta $loc $cha"
+      echo "[ERROR] taup_time failed to get travaltime for $net $sta $loc $cha" >> $log_file
       exit 1
     fi
     # get time window
@@ -278,20 +329,23 @@ do
   done
 
   #------ get waveform data
-  echo 
-  echo "[LOG] ------ get waveform data"
-  echo
+  echo >> $log_file
+  echo "[LOG] ------ get waveform data" >> $log_file
+  echo >> $log_file
+
   mseed_file=$event_dir/mseed/${evid}.mseed
   # query waveforms 
   str_link="${fdsnws_dataselect}"
-  echo "[LOG] wget --post-file=$dataselect_list $str_link -O $mseed_file"
-  echo
-  wget --post-file=$dataselect_list "$str_link" -O $mseed_file
+  echo >> $log_file
+  echo "[LOG] wget --post-file=$dataselect_list $str_link -O $mseed_file" >> $log_file
+  echo >> $log_file
+
+  wget --post-file=$dataselect_list "$str_link" -O $mseed_file -a $log_file
 
   #------ get sacpz
-  echo 
-  echo "[LOG] ------ get sacpz"
-  echo
+  echo >> $log_file
+  echo "[LOG] ------ get sacpz" >> $log_file
+  echo >> $log_file
 
   sacpz_dir=$event_dir/sacpz
 
@@ -302,15 +356,15 @@ do
     read -ra x <<< $(grep "${net}[ ]*${sta}[ ]*${loc}" $dataselect_list)
     if [ "$?" -ne 0 ]
     then
-      echo "[WARN] ${net}.${sta} is not found in $dataselect_list! SKIP"
+      echo >> $log_file
+      echo "[WARN] ${net}.${sta} is not found in $dataselect_list! SKIP" >> $log_file
       continue
     fi
     starttime="${x[4]}"
     endtime="${x[5]}"
 
-    echo
-    echo "SACPZ ${net}.${sta}.${loc}.${cha} $starttime $endtime"
-    echo
+    echo >> $log_file
+    echo "SACPZ ${net}.${sta}.${loc}.${cha} $starttime $endtime" >> $log_file
   
     url="${irisws_sacpz}?net=${net}&sta=${sta}&loc=${loc}&cha=${cha}&starttime=${starttime}&endtime=${endtime}"
 
@@ -320,7 +374,7 @@ do
     fi
     outfile="${sacpz_dir}/${net}.${sta}.${loc}.${cha}"
   
-    wget "$url" -O $outfile
+    wget "$url" -O $outfile -a $log_file
   
   done
 
