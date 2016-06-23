@@ -9,7 +9,7 @@ NAME
 
 SYNOPSIS
 
-  pdf_merge.sh <out file> <1.pdf> <2.pdf> [...]
+  pdf_merge.sh <out file> <1.pdf> [<2.pdf> ...]
 
 DESCRIPTION
 
@@ -39,10 +39,10 @@ EOF
 }
 
 #====== main
-if [[ $# -lt 3 ]]
+if [[ $# -lt 2 ]]
 then
   usage
-  echo "[ERROR] need at least 3 inputs"
+  echo "[ERROR] need at least 2 inputs"
   exit -1
 fi
 

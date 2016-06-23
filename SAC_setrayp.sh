@@ -1,19 +1,28 @@
 #!/bin/bash
 
-function usage(){
-  echo "Usage: $0: -L <SAC_List>  -D <SAC_DIR> -P<phase>\n"
-  echo "Default: $0 [-L-] -D."
-  echo "evdp(km) and gcarc(degree) should be correctly set in SAC header!"
-  echo "P: user0: rayp(s/km); user1: rayp(s/deg)"
-  echo "S: user2: rayp(s/km); user3: rayp(s/deg)"
-  exit 1
+usage(){
+  cat<<EOF
+Usage 
+-----
+$0 -L <SAC_List>  -D <SAC_DIR>
+
+Default: $0 [-L-] -D.
+
+Note
+----
+evdp(km) and gcarc(degree) should be correctly set in SAC header!
+
+P: user0: rayp(s/km); user1: rayp(s/deg)
+S: user2: rayp(s/km); user3: rayp(s/deg)
+
+EOF
+
 }
 
 # Default parameters
 
 saclst=-
 sacdir=.
-PHASE="P"
 
 # parse options
 while getopts L:D:P:h name
@@ -21,7 +30,6 @@ do
   case $name in
   L) saclst="$OPTARG";;
   D) sacdir="$OPTARG";;
-  P) PHASE="$OPTARG";;
   [h,?]) usage; exit -1
   esac
 done
@@ -29,9 +37,9 @@ done
 # loop each sac file
 for sacf in $(cat $saclst)
 do
-  stninf=$(dumpSHD $sacdir/$sacf gcarc evdp)
-  gcarc=$(echo $stninf | awk '{print $3}')
-  evdp=$(echo $stninf | awk '{print $5}')
+  stninf=$(saclst gcarc evdp f $sacdir/$sacf)
+  gcarc=$(echo $stninf | awk '{print $2}')
+  evdp=$(echo $stninf | awk '{print $3}')
   
   # for P
   raypdeg_P=$(taup_time -h $evdp -deg $gcarc -ph P -rayp | sed -n "1p")
