@@ -29,4 +29,4 @@ A = M0/mu/d
 # width = length/2
 length = (2.0*A)**0.5
 
-print("length ~ ", length)
+print("length ~ %f (km)" % (length/1000))
