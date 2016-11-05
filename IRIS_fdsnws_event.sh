@@ -11,8 +11,8 @@ SYNOPSIS
 DESCRIPTION 
 
     -R Specify a box search region.  
-        box region: [b<south>/<north>/<west>/<east>] e.g. b/-122/-121.5/46.8/46.9
-        radial region: [r<lat0>/<lon0>/<minRadius>/<maxRadius>], Radius(degree), e.g. r/-120/40/1.0/5.0
+        box region: [b/<south>/<north>/<west>/<east>] e.g. b/-122/-121.5/46.8/46.9
+        radial region: [r/<lat0>/<lon0>/<minRadius>/<maxRadius>], Radius(degree), e.g. r/-120/40/1.0/5.0
     -T Specify the temporal range, e.g. 2012-11-29T00:00:00/2012-12-01T00:00:00
         2012-11-29 is equivalent to 2012-11-29T00:00:00
     -M Specify the magnitude range, e.g. -0.1/8.3
