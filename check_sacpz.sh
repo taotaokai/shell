@@ -9,30 +9,50 @@ SYNOPSIS
     make_sacpz_IRF [-o <out_dir>]
 
 DESCRIPTION
+    check whether IRF is close to a low-pass filtered delta function
+
     read files from STDIN.
     -o  if used, output IRF files.
-    check whether IRF is close to a low-pass filtered delta function
-    a broadband velocity seismometer should have a flat velocity response
+    -f  specify sac filter command before comparing, default "lp co 2 n 2 p 2"
+
+NOTE
+    Here the sacpz file is assumed to transform from ground displacement to analog signal.
+    And a broadband velocity seismometer should have a flat velocity response
     within a wide frequency range, like 120s~100Hz (e.g. STS-2, Trillium-120,)
-    Here, I only low-pass below 2 Hz.
+    That means, if the input is a delta function, the output should be very close to
+    a broad band-pass filtered first derivative of delta.  
+    When I compare IRF with the first derivative of delta, both are low-passed below 2 Hz.
+
 EOF
 }
 
 #====== get command line args
+filter="lp co 2 n 2 p 2"
 flag_out=0 # flag if output IRF files
-while getopts "o:h" opt
+while getopts "o:f:h" opt
 do
-    case $opt in
-        o)
-            out_dir="$OPTARG"
-            flag_out=1
-            ;;
-        [h,?])
-            selfdoc
-            exit 1
-            ;;
-    esac
+  case $opt in
+    o)
+      out_dir="$OPTARG"
+      flag_out=1
+      ;;
+    f)
+      filter="$OPTARG"
+      ;;
+    [h,?])
+      selfdoc
+      exit 1
+      ;;
+  esac
 done
+
+cat <<EOF
+#====================
+#Parameters:
+#   -o = "$out_dir"
+#   -f = "$filter"
+#====================
+EOF
 
 #====== create delta pulse(centered at 50s) and its derivative
 pulse=$(mktemp)
@@ -97,7 +117,7 @@ EOF
 
         cat<<EOF >> $tmp_sacm
 r more $pulse_d1
-lp co 2 n 4 p 2
+${filter}
 correlate master 2 normalized
 setbb max &1,depmax
 setbb maxtime ( gettime max )
