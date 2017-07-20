@@ -1,49 +1,60 @@
 #!/bin/bash
 
-# mkKML_line create .kml file for displaying in GoogleEarth
-#--------------------------------------------------------------------------
-# Usage: mkKML < "x/longitude y/latitude z/height"
-#--------------------------------------------------------------------------
-# [2013-04-30] created 
+selfdoc() {
+cat<<EOF
+NAME
 
-#title=$1
-#marker=$2
+SYNOPSIS
+  mkKML_line.sh input_file group_name
 
-#if [ -z "$title" ]
-#then
-#	title='title'
-#fi
-#
-#if [ -z "$marker" ]
-#then
-#	marker='http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png'
-#fi
+DESCRIPTION
 
-echo '<?xml version="1.0" encoding="UTF-8"?>'
-echo '<kml xmlns="http://www.opengis.net/kml/2.2">'
-echo '<Document>'
-echo "  <name>Line</name>"
-echo "  <description>Description</description>"
-echo '  <Placemark>'
-echo '      <name>LineString</name>'
-echo '      <description>yellow lines</description>'
-echo '      <Style>'
-echo '      <LineStyle>'
-echo '        <color>7f00ffff</color>'
-echo '        <width>4</width>'
-echo '      </LineStyle>'
-echo '      </Style>'
-echo '      <LineString>'
-echo '<!--        <altitudeMode>relativeToGround</altitudeMode> -->'
-echo '        <coordinates>'
+PARAMETERS"
+  input_file: multi-segment lines of lat,lon seperated by <
+  group_name: line group name
 
-while read lon lat height 
-do
-    echo "          $lon,$lat,$height"
-done 
+NOTES
+EOF
+}
 
-echo '        </coordinates>'
-echo '      </LineString>'
-echo '    </Placemark>'
-echo '</Document>'
-echo '</kml>'
+#====== check input arguments
+if [ "$#" -lt 1 ]
+then
+  selfdoc
+  exit -1
+fi
+
+input_file=${1:?[arg]need intpu_file}
+group_name=${2:-NAN}
+
+#====== output KML file
+cat<<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>${group_name}</name>
+  <description></description>
+  <Style id="yellowLine">
+    <LineStyle>
+      <color>7f00ffff</color>
+      <width>4</width>
+    </LineStyle>
+  </Style>
+
+  <Placemark> 
+    <name>LineString</name> 
+    <description>fault line</description> 
+    <styleUrl>#yellowline</styleUrl> 
+    <LineString> 
+      <altitudeMode>relativeToGround</altitudeMode>
+      <coordinates>
+EOF
+
+awk '$1==">"{printf "</coordinates> </LineString> </Placemark>\n<Placemark> <name>LineString</name> <description>fault line</description> <styleUrl>#yellowline</styleUrl> <LineString> <altitudeMode>relativeToGround</altitudeMode> <coordinates>\n"};
+$1!=">"{printf "%f,%f,0 \n", $1, $2}' $input_file
+
+cat<<EOF
+</coordinates> </LineString> </Placemark>
+</Document>
+</kml>
+EOF

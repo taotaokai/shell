@@ -28,6 +28,7 @@ EOF
 
 # base url
 fdsnws_event="http://service.iris.edu/fdsnws/event/1/query"
+#fdsnws_event="http://isc-mirror.iris.washington.edu/fdsnws/event/1/query"
 
 # default parameter values
 R=b/-90/90/-180/180
@@ -84,6 +85,7 @@ then
 fi
 
 strLink="${fdsnws_event}?${strT}&${strM}&${strR}&${strD}&${strC}&format=text"
+#strLink="${fdsnws_event}?${strT}&${strM}&${strR}&${strD}&${strC}&format=ISF"
 
 echo "# $strLink"
 
