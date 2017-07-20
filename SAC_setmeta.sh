@@ -34,13 +34,14 @@ echo >> $log_file
 
 tmp_log=$(mktemp)
 
-event=( $(grep $event_id $event_list | sed "s/|/ /g") )
-evla=${event[2]}
-evlo=${event[3]}
-evdp=${event[4]}
-mag=${event[10]}
+#event=( $(grep $event_id $event_list | sed "s/|/ /g") )
+event=$(grep $event_id $event_list)
+evla=$(echo $event | awk -F"|" '{print $3}' )
+evlo=$(echo $event | awk -F"|" '{print $4}' )
+evdp=$(echo $event | awk -F"|" '{print $5}' )
+mag=$(echo $event | awk -F"|" '{print $11}' )
 
-origin_time=${event[1]/T/ }
+origin_time=$(echo $event | awk -F"|" '{gsub(/T/," ",$2); print $2}' )
 ogmt=$(date -ud "$origin_time" +"%Y %j %H %M %S %N" |\
   awk '{print $1,$2,$3,$4,$5,$6/1000000}')
 
@@ -48,7 +49,6 @@ ogmt=$(date -ud "$origin_time" +"%Y %j %H %M %S %N" |\
 grep -v ^# $channel_list |\
 while IFS='|' read net sta loc chan stla stlo stel stdp cmpaz cmpdip dummy
 do
-
     channel_id="${net}.${sta}.${loc}.${chan}"
 
     # get corresponding sac/sacpz files
@@ -71,6 +71,7 @@ ch lcalda true
 ch stla $stla stlo $stlo stel $stel stdp $stdp cmpaz $cmpaz cmpinc $cmpinc 
 ch evla $evla evlo $evlo evdp $evdp mag $mag
 ch o gmt $ogmt
+lh
 wh
 q
 EOF
