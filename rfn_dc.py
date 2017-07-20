@@ -286,6 +286,8 @@ for sacfile in sacfile_list:
   rayp_list.append(rayp_s_deg)
   rfn_surface_list.append(rfn_surface)
   rfn_dc_list.append(rfn_dc)
+
+  stnm = st[0].stats.station
   
   #------ ouptut sac
   tr = st[0].copy()
@@ -466,8 +468,8 @@ ax2.set_ylim([min(rayp_list)-1.5*yspacing, max(rayp_list)+1.5*yspacing])
 ax1.set_xlabel("Time (sec)")
 ax2.set_xlabel("Time (sec)")
 
-ax1.set_title("surface P-RF")
-ax2.set_title("sub-sediment P-RF (%.1f km)"%(dc_depth))
+ax1.set_title("%s: surface P-RF"%(stnm))
+ax2.set_title("%s: sub-sediment P-RF (%.1f km)"%(stnm, dc_depth))
 
 ax1.set_ylabel("Ray parameter (s/deg)")
 
