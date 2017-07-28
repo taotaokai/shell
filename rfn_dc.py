@@ -258,11 +258,14 @@ for sacfile in sacfile_list:
 
   #------ downward continuatin
   V0 = np.array(np.zeros((4,nomega,1)), dtype='complex')
-  V0[0,:,0] = np.transpose(np.fft.rfft(RZ[0,:], axis=-1))
-  V0[1,:,0] = -1.0*np.transpose(np.fft.rfft(RZ[1,:], axis=-1))
+  # the Haskell module defines the inverse Fourier transform as f(t) = Int[f(w)*exp(-1i*w*t)]
+  # , while numpy.fft has the opposite sign convention. So we need to take complex conjuate here.
+  V0[0,:,0] = np.transpose(np.conjugate(np.fft.rfft(RZ[0,:], axis=-1)))
+  V0[1,:,0] = -1.0*np.transpose(np.conjugate(np.fft.rfft(RZ[1,:], axis=-1)))
 
   # beneath sediment layer
   V1 = haskell.dc_psv_iso(dc_lyr_z,dc_lyr_vp,dc_lyr_vs,dc_lyr_rho,omega,rayp_s_km,V0)
+  V1 = np.conjugate(V1)
 
   # inverse FFT
   Pu = np.fft.irfft(np.transpose(V1[1,:,0]), nt, axis=-1)

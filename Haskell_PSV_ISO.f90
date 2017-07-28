@@ -2,12 +2,22 @@
 !
 !--THEORY
 !
+!   We seek for a solution that satifies a specific form, a plane wave travelling in x direction, 
+!   u(x,y,z,t) = u(t - p*x, z), where p is the horizontal slowness.
+!
+!   After pluging this specific solution into the wave equation, we have
+!
 !   A*(dV/dt) = dV/dz + F
-!   , where V = [Vr, Vz, Tr, Tz] is the velocity-traction vector radial(r), vertical-down(z)
+!   , where V = [Vr, Vz, Tr, Tz] are the radial(along x direction) and z(down) components of the velocity-traction vector,
+!   and A is a 4x4 matrix depending on the model (vp,vs,rho) and slowness p.
 !
-!   In frequency domain: 1i*w*A*V = dV/dz + F
+!   In frequency domain: 
+!   
+!       V(t,z) = Int[V(w)*exp(-1i*w*t),{w,-Inf,Inf}]
 !
-!   The Jordan decomposition gives A = M * J * Minv
+!       -1i*w*A*V(w) = dV(w)/dz + F(w)
+!
+!   The Jordan decomposition gives A = M * J * inv(M)
 !
 !   M: mode matrix (4 by 4 matrix),
 !       M(:,1|3): down-going P|SV, M(:,2|4): up-going P|SV;
@@ -36,14 +46,12 @@
 !  (tangential) T.-------------------------------> R(radial)
 !                |      SV       |       P
 !                |     /         |      /
-!                | SH *          |  SH * 
+!                | SH *          |  SH *  (SH pointing inward)
 !                |     \         |      \
 !                |       P       |       SV
 !                V   
 !                Z(down)  
-!
-! 4) Inverse Fourier transformation is defined as: F(t) = Int[F(w)*exp(1i*w*t),{w,-Inf,Inf}]
-!
+!  
 !--HISTORY
 !
 ! [2012-05-27] created
@@ -88,9 +96,10 @@ integer, intent(in) :: nz, nw, np
 !f2py integer intent(hide),depend(z) :: nz = len(z)
 !f2py integer intent(hide),depend(w) :: nw = len(w)
 !f2py integer intent(hide),depend(p) :: np = len(p)
-real*8, dimension(nz), intent(in) :: z, vp, vs, rho
+real*8, dimension(nz), intent(in) :: z
+complex*16, dimension(nz), intent(in) :: vp, vs, rho
 complex*16, dimension(nw), intent(in) :: w
-real*8, dimension(np), intent(in) :: p
+complex*16, dimension(np), intent(in) :: p
 integer, intent(in) :: itype
 
 complex*16, dimension(nw,np), intent(out) :: Vr
@@ -98,7 +107,7 @@ complex*16, dimension(nw,np), intent(out) :: Vu
 
 ! local variables
 complex*16, dimension(4,4,nw) :: H
-real*8, dimension(4,4) :: M, Minv, Q
+complex*16, dimension(4,4) :: M, Minv, Q
 complex*16, dimension(4,4) :: MinvH
 complex*16 :: a,b,c,d,det
 integer :: iw, ip
@@ -186,24 +195,25 @@ subroutine DC_PSV_ISO(nz,z,vp,vs,rho,nw,w,np,p,V0, V1)
 
 implicit none
 
-complex*16, parameter :: XJ = (0,1)
-complex*16, parameter :: XZERO = (0,0)
-complex*16, parameter :: XONE = (1,0)
+!complex*16, parameter :: XJ = (0,1)
+!complex*16, parameter :: XZERO = (0,0)
+!complex*16, parameter :: XONE = (1,0)
 
 integer, intent(in) :: nz, nw, np
 !f2py integer intent(hide),depend(p) :: np = len(p)
 !f2py integer intent(hide),depend(w) :: nw = len(w)
 !f2py integer intent(hide),depend(z) :: nz = len(z)
-real*8, dimension(nz), intent(in) :: z, vp, vs, rho
+real*8, dimension(nz), intent(in) :: z
+complex*16, dimension(nz), intent(in) :: vp, vs, rho
 complex*16, dimension(nw), intent(in) :: w
-real*8, dimension(np), intent(in) :: p
+complex*16, dimension(np), intent(in) :: p
 complex*16, dimension(4,nw,np), intent(in) :: V0
 
 complex*16, dimension(4,nw,np), intent(out) :: V1
 
 ! local variables
 complex*16, dimension(4,4,nw) :: H
-real*8, dimension(4,4) :: M, Minv, Q
+complex*16, dimension(4,4) :: M, Minv, Q
 integer :: iw, ip
 
 do ip = 1,np ! loop each event
@@ -253,12 +263,12 @@ subroutine Haskell_PSV_ISO(nz,z,vp,vs,rho,nw,w,p, H)
 !
 !--NOTE
 !
-! inverse Fourier transformation is defined as: F(t) = Int[H(w)*exp(1i*w*t),{w,-Inf,Inf}]
+! inverse Fourier transformation is defined as: F(t) = Int[H(w)*exp(-1i*w*t),{w,-Inf,Inf}]
 !
 !   In one homogeneous layer:
 !
-!   1i*w*A*v = dv/dz, A = M*Q*Minv, v(z) = M*exp(1i*w*Q*z)*Minv*v(0)
-!   H(z;0) = M*exp(1i*w*Q*z)*Minv
+!   -1i*w*A*v = dv/dz, A = M*Q*Minv, v(z) = M*exp(-1i*w*Q*z)*Minv*v(0)
+!   H(z;0) = M*exp(-1i*w*Q*z)*Minv
 
 implicit none
 
@@ -270,17 +280,18 @@ complex*16, parameter :: XONE = (1,0)
 integer, intent(in) :: nz, nw
 !f2py integer intent(hide),depend(z) :: nz = len(z)
 !f2py integer intent(hide),depend(w) :: nw = len(w)
-real*8, dimension(nz), intent(in) :: z, vp, vs, rho
+real*8, dimension(nz), intent(in) :: z
+complex*16, dimension(nz), intent(in) :: vp, vs, rho
 complex*16, dimension(nw), intent(in) :: w
-real*8, intent(in) :: p
+complex*16, intent(in) :: p
 
 ! output
 complex*16, dimension(4,4,nw), intent(out) :: H
 
 ! local variables
 complex*16, dimension(4,4) :: Jm
-real*8, dimension(4,4) :: M, Minv
-real*8, dimension(4) :: Q
+complex*16, dimension(4,4) :: M, Minv
+complex*16, dimension(4) :: Q
 integer :: i, iz, iw
 
 ! initialize H to identity matrix for each frequency sample
@@ -298,7 +309,7 @@ do iz = 1,nz
     ! phase matrix of up-/down-going P and SV waves from the top to the bottom in each layer
     Jm = XZERO
     do i = 1,4
-      Jm(i,i) = exp(XJ*w(iw)*Q(i)*z(iz))
+      Jm(i,i) = exp(-XJ*w(iw)*Q(i)*z(iz))
     enddo
     H(:,:,iw) = matmul( matmul(M, matmul(Jm, Minv)), H(:,:,iw))
   end do
@@ -314,27 +325,29 @@ end subroutine
 subroutine Mode_PSV_ISO(vp,vs,rho,p, M,Minv,Q)
 !
 !--INPUT
-!   real*8 :: vp,vs,rho: Vp, Vs(km/s) and density(g/cm^3)
-!   real*8 :: p: ray parameter(s/km)
+!   complex*8 :: vp,vs,rho: Vp, Vs(km/s) and density(g/cm^3)
+!   complex*8 :: p: ray parameter(s/km)
 !
 !--OUTPUT
-!   real*8 :: M(4,4), Minv(4,4), mode and inverse mode matrix for P-SV motion
-!   real*8 :: Q(4), vertical slownesses
+!   complex*16 :: M(4,4), Minv(4,4), mode and inverse mode matrix for P-SV motion
+!   complex*16 :: Q(4), vertical slownesses
 
 implicit none
 
-real*8, intent(in) :: vp, vs, rho, p
+complex*16, intent(in) :: vp, vs, rho, p
 
-real*8, dimension(4,4), intent(out) :: M, Minv
-real*8, dimension(4), intent(out) :: Q
+complex*16, dimension(4,4), intent(out) :: M, Minv
+complex*16, dimension(4), intent(out) :: Q
 
-real*8 :: p2, vs2, mu, qp, qs, qss
+complex*16 :: p2, vs2, mu, qp, qs, qss
 
 p2 = p**2
 vs2 = vs**2
 mu = rho*vs2
-qp = sqrt(1/vp**2-p2)
+! NOTE for post-critial incidence, the upper plane branch of sqrt(some value smaller than 0) chose by default should only be used for positive frequency. For negative frequency the lower plane should be used, i.e. -sqrt(). Since we always work with positive frequency, this issue should be safely avoided. 
+qp = sqrt(1/vp**2-p2) 
 qs = sqrt(1/vs2-p2)
+!write(*,*) qp, qs
 qss = 1/vs2-2*p2
 
 ! Mode matrix
@@ -361,34 +374,33 @@ end subroutine
 !
 !------------------------------------------------
 !
-
-program test_Haskell
-
-implicit none
-
-integer, parameter :: nz = 2
-double precision, dimension(nz) :: vp, vs, rho, z
-DATA vp/4.d0, 6.0d0/ vs/2.d0, 4.0d0/ rho/2.7d0,3.0d0/ z/1.d0,4.d0/
-
-integer, parameter :: nw = 2
-complex*16, dimension(nw) :: w
-
-double precision, parameter :: p = 0.05 
-
-!double precision, dimension(4,4) :: M, Minv, Q 
-
-complex*16, dimension(4,4,nw) :: H
-
-integer :: i
-
-w(1) = (1.0, 0.0)
-w(2) = (2.0, 0.0)
-
-call Haskell_PSV_ISO(nz,z,vp,vs,rho, nw,w, p, H)
-  
-do i = 1, nw
-  write(*,*) "iw = ", i
-  write(*,*) H(:,:,i)
-enddo
-
-end program test_Haskell
+!program test_Haskell
+!
+!implicit none
+!
+!integer, parameter :: nz = 2
+!double precision, dimension(nz) :: vp, vs, rho, z
+!DATA vp/4.d0, 6.0d0/ vs/2.d0, 4.0d0/ rho/2.7d0,3.0d0/ z/1.d0,4.d0/
+!
+!integer, parameter :: nw = 2
+!complex*16, dimension(nw) :: w
+!
+!double precision, parameter :: p = 0.05 
+!
+!!double precision, dimension(4,4) :: M, Minv, Q 
+!
+!complex*16, dimension(4,4,nw) :: H
+!
+!integer :: i
+!
+!w(1) = (1.0, 0.0)
+!w(2) = (2.0, 0.0)
+!
+!call Haskell_PSV_ISO(nz,z,vp,vs,rho, nw,w, p, H)
+!  
+!do i = 1, nw
+!  write(*,*) "iw = ", i
+!  write(*,*) H(:,:,i)
+!enddo
+!
+!end program test_Haskell
