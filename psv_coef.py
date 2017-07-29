@@ -34,11 +34,16 @@ parser.add_argument("--m1", metavar="Vel", type=float, nargs=3, default=[6, 3.5,
 parser.add_argument("--m2", metavar="Vel", type=float, nargs=3, default=[8, 4.5, 3.3],
     help="vp,vs,rho below the interface in km/s,km/s,g/cm^3")
 
-parser.add_argument("-t", '--wave-type', type=str, default='p1',
+parser.add_argument("-t", '--wave-type', type=str, default='p1', choices=['p1','p2','s1','s2'],
     help="incident wave type, p1,s1: downgoing P/S, p2,s2: upgoing P/S")
 
-parser.add_argument("-i", '--incident-angle', type=float, default=20.0,
-    help="incident angle in degree ")
+group = parser.add_mutually_exclusive_group()
+
+group.add_argument("-i", '--incident-angle', type=float, default=20.0,
+    help="incident angle in degree")
+
+group.add_argument("-p", '--ray-parameter', type=float, default=None,
+    help="ray parameter in s/km")
 
 args = parser.parse_args()
 
@@ -52,24 +57,30 @@ ro2 = args.m2[2]
 
 wave_type = args.wave_type
 incident_angle = args.incident_angle
+ray_parameter = args.ray_parameter
+
+if incident_angle > 90.0 or incident_angle < 0.0:
+  raise ValueError("-i --incident-angle must have a value between 0.0 and 90.0.")
+
+if ray_parameter:
+  if ray_parameter < 0.0:
+    raise ValueError("-p --ray-parameter must be greater than 0.0.")
 
 #====== Mode vector
 # determine ray parameter
-incang = np.deg2rad(incident_angle)
+if not ray_parameter:
+  incang = np.deg2rad(incident_angle)
+  if wave_type == 'p1':
+    ray_parameter = np.sin(incang)/vp1
+  elif wave_type == 's1':
+    ray_parameter = np.sin(incang)/vs1
+  elif wave_type == 'p2':
+    ray_parameter = np.sin(incang)/vp2
+  elif wave_type == 's2':
+    ray_parameter = np.sin(incang)/vs2
 
-incarg = np.complex(incang)
-
-if wave_type == 'p1':
-  rayp = np.sin(incang)/vp1
-elif wave_type == 's1':
-  rayp = np.sin(incang)/vs1
-elif wave_type == 'p2':
-  rayp = np.sin(incang)/vp2
-elif wave_type == 's2':
-  rayp = np.sin(incang)/vs2
-
-M1, Minv1, Q1 = haskell.mode_psv_iso(vp1,vs1,ro1,rayp)
-M2, Minv2, Q2 = haskell.mode_psv_iso(vp2,vs2,ro2,rayp)
+M1, Minv1, Q1 = haskell.mode_psv_iso(vp1,vs1,ro1,ray_parameter)
+M2, Minv2, Q2 = haskell.mode_psv_iso(vp2,vs2,ro2,ray_parameter)
 
 #print(rayp)
 #print(M1, Minv1, Q1)
@@ -94,6 +105,8 @@ if wave_type == 'p1':
   Rp1s1 = m1[3]
   print("Tp1p2 Tp1s2 Rp1p1 Rp1s1")
   print(Tp1p2,Tp1s2,Rp1p1,Rp1s1)
+  print(np.abs(Tp1p2),np.abs(Tp1s2),np.abs(Rp1p1),np.abs(Rp1s1))
+  print(np.angle(Tp1p2,deg=True),np.angle(Tp1s2,deg=True),np.angle(Rp1p1,deg=True),np.angle(Rp1s1,deg=True))
 elif wave_type == 's1':
   Minv1_Pd2 = np.dot(Minv1, M2[:,0])
   Minv1_Sd2 = np.dot(Minv1, M2[:,2])
@@ -104,7 +117,7 @@ elif wave_type == 's1':
   det = a*d - c*b
   Ts1p2 = -b/det
   Ts1s2 = a/det
-  m1 = Tp1p2*Minv1_Pd2 + Tp1s2*Minv1_Sd2
+  m1 = Ts1p2*Minv1_Pd2 + Ts1s2*Minv1_Sd2
   Rs1p1 = m1[1]
   Rs1s1 = m1[3]
   print("Ts1p2 Ts1s2 Rs1p1 Rs1s1")
@@ -112,10 +125,10 @@ elif wave_type == 's1':
 elif wave_type == 'p2':
   Minv2_Pu1 = np.dot(Minv2, M1[:,1])
   Minv2_Su1 = np.dot(Minv2, M1[:,3])
-  a = Minv1_Pu2[1]
-  b = Minv1_Su2[1]
-  c = Minv1_Pu2[3]
-  d = Minv1_Su2[3]
+  a = Minv2_Pu1[1]
+  b = Minv2_Su1[1]
+  c = Minv2_Pu1[3]
+  d = Minv2_Su1[3]
   det = a*d - c*b
   Tp2p1 = d/det
   Tp2s1 = -c/det
@@ -127,10 +140,10 @@ elif wave_type == 'p2':
 elif wave_type == 's2':
   Minv2_Pu1 = np.dot(Minv2, M1[:,1])
   Minv2_Su1 = np.dot(Minv2, M1[:,3])
-  a = Minv1_Pu2[1]
-  b = Minv1_Su2[1]
-  c = Minv1_Pu2[3]
-  d = Minv1_Su2[3]
+  a = Minv2_Pu1[1]
+  b = Minv2_Su1[1]
+  c = Minv2_Pu1[3]
+  d = Minv2_Su1[3]
   det = a*d - c*b
   Ts2p1 = -b/det
   Ts2s1 = a/det

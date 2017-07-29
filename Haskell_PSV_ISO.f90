@@ -40,13 +40,13 @@
 !
 ! 2) vertical direction points downward to the earth's center;
 !
-! 3) Polarization of down- and up-going waves
+! 3) Polarization of down- and up-going waves (all have positive radial projection)
 ! 
 !                     Down-going |  Up-going
 !  (tangential) T.-------------------------------> R(radial)
 !                |      SV       |       P
 !                |     /         |      /
-!                | SH *          |  SH *  (SH pointing inward)
+!                |    *          |     *  
 !                |     \         |      \
 !                |       P       |       SV
 !                V   
