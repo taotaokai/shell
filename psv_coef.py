@@ -122,6 +122,8 @@ elif wave_type == 's1':
   Rs1s1 = m1[3]
   print("Ts1p2 Ts1s2 Rs1p1 Rs1s1")
   print(Ts1p2,Ts1s2,Rs1p1,Rs1s1)
+  print(np.abs(Ts1p2),np.abs(Ts1s2),np.abs(Rs1p1),np.abs(Rs1s1))
+  print(np.angle(Ts1p2,deg=True),np.angle(Ts1s2,deg=True),np.angle(Rs1p1,deg=True),np.angle(Rs1s1,deg=True))
 elif wave_type == 'p2':
   Minv2_Pu1 = np.dot(Minv2, M1[:,1])
   Minv2_Su1 = np.dot(Minv2, M1[:,3])
@@ -137,6 +139,8 @@ elif wave_type == 'p2':
   Rp2s2 = m2[2]
   print("Tp2p1 Tp2s1 Rp2p2 Rp2s2")
   print(Tp2p1,Tp2s1,Rp2p2,Rp2s2)
+  print(np.abs(Tp2p1),np.abs(Tp2s1),np.abs(Rp2p2),np.abs(Rp2s2))
+  print(np.angle(Tp2p1,deg=True),np.angle(Tp2s1,deg=True),np.angle(Rp2p2,deg=True),np.angle(Rp2s2,deg=True))
 elif wave_type == 's2':
   Minv2_Pu1 = np.dot(Minv2, M1[:,1])
   Minv2_Su1 = np.dot(Minv2, M1[:,3])
@@ -152,3 +156,6 @@ elif wave_type == 's2':
   Rs2s2 = m2[2]
   print("Ts2p1 Ts2s1 Rs2p2 Rs2s2")
   print(Ts2p1,Ts2s1,Rs2p2,Rs2s2)
+  print(np.abs(Ts2p1),np.abs(Ts2s1),np.abs(Rs2p2),np.abs(Rs2s2))
+  print(np.angle(Ts2p1,deg=True),np.angle(Ts2s1,deg=True),np.angle(Rs2p2,deg=True),np.angle(Rs2s2,deg=True))
+
