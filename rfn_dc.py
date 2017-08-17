@@ -418,8 +418,11 @@ fig = plt.figure(figsize=(11, 8.5)) # US Letter
 ax1 = fig.add_axes([0.1, 0.1, 0.35, 0.8])
 ax2 = fig.add_axes([0.55, 0.1, 0.35, 0.8])
 
-yrange = max(rayp_list) - min(rayp_list)
 nrfn = len(rfn_surface_list)
+if nrfn == 1:
+  yrange = 1
+else:
+  yrange = max(rayp_list) - min(rayp_list)
 yspacing = 1.5*yrange/nrfn
 
 rfn_surface_stk = rfn_surface_list[0]
