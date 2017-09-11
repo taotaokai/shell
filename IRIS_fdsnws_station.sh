@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 usage(){
 cat<<EOF
 NAME 
@@ -52,7 +50,7 @@ done
 
 # validate input arguments
 
-echo "# Command: $0 -R$R -T$T -L$L -O$O"
+echo "#Command: $0 -R$R -T$T -L$L -O$O"
 
 # form the query links 
 # keywords: [starttime,endtime,minlatitude,maxlatitude,minlongitude,maxlongitude,latitude,longitude,maxradius,minradius,mindepth,maxdepth,minmagnitude,maxmagnitude,magnitudetype]
@@ -74,7 +72,13 @@ strLink="${fdsnws_station}?${strR}&${strT}&${strL}&channel=FH?,CH?,HH?,BH?&forma
 
 echo "# Link: $strLink"
 
-wget $strLink -O $O
+tmpfile=$(mktemp)
+wget $strLink -O $tmpfile
+
+echo "#Command: $0 -R$R -T$T -L$L -O$O" > $O
+cat $tmpfile >> $O
+
+rm $tmpfile
 
 echo "Finished. "
 
