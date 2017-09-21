@@ -228,12 +228,12 @@ for istn in range(len(stnm_list)):
     polar2 = np.array([v[0,1], v[1,1], 0.0])
     ellipticity = w[1]/w[0]
 
-  vcross = np.cross(radial, polar1)
+  vcross = np.cross(polar1, radial)
   vdot = np.dot(radial, polar1)
   if vdot >= 0.0:
-    ang = -1*np.arccos(np.abs(vdot))*np.sign(vcross[2])
-  else:
     ang = np.arccos(np.abs(vdot))*np.sign(vcross[2])
+  else:
+    ang = -1*np.arccos(np.abs(vdot))*np.sign(vcross[2])
 
   az_list.append((baz-180.0)%360.0)
 
@@ -370,6 +370,13 @@ fig = plt.figure(figsize=(11, 8.5)) # US Letter
 plt.plot(az, polar_angle, 'ro')
 for i in range(len(az_list)):
   plt.text(az[i]+1, polar_angle[i], "%s(%.2f)"%(stnm_src[i], weight[i]))
+
+out_file = "%s/%s_polarization.txt"%(out_dir,stnm_rec)
+with open(out_file, "w") as f:
+  f.write("#receiver_station: %s\n"%(stnm_rec))
+  f.write("#az polar_angle ellipticity weight source_station\n")
+  for i in range(len(az_list)):
+    f.write("%+9.3f  %+9.3f  %+9.3f  %+9.3f  %s\n"%(az[i], polar_angle[i], ellipticity[i], weight[i], stnm_src[i]))
 
 az1 = np.linspace(0,2*np.pi,100)
 polar_angle1 = np.zeros(az1.shape)
