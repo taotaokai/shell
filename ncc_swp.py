@@ -31,7 +31,8 @@ def convert_arg_line_to_args(arg_line):
 parser = argparse.ArgumentParser(
   formatter_class=argparse.ArgumentDefaultsHelpFormatter,
   fromfile_prefix_chars='@',
-  description='Harmonic analysis of Rayleigh wave horizontal polarization deviation angle using noise cross-correlation data.',
+  description='Harmonic analysis of Rayleigh wave horizontal polarization deviation angle using noise cross-correlation data. \
+  The deviation angle is approximated to N degree by d(az) ~ sum(An*cos(n*(az - phi_n)), n=0,N)',
   epilog="It is assumed that the zero time in sac record corresponds to the cross-correlation zero lag time.",
   )
 
@@ -67,6 +68,15 @@ parser.add_argument("-g", "--dist-range", metavar="DIST", type=float, nargs=2, d
 parser.add_argument("--sampling-interval", type=float, default=0.1,
     help="time interval for resampling data, in second")
 
+parser.add_argument("--harmonic-degree", type=int, default=10,
+    help="number of harmonic degree in Fourier series")
+
+parser.add_argument("--bootstrap-num", type=int, default=100,
+    help="number of bootstrap samples, in second")
+
+parser.add_argument("--bootstrap-ratio", type=float, default=0.8,
+    help="ratio of data used in each bootstrap sampling, should be between 0.5 and 1.0")
+
 parser.add_argument("-o", "--out-dir", type=str, default='./',
     help="output directory for result figures")
 
@@ -99,6 +109,14 @@ min_dist = args.dist_range[0]
 max_dist = args.dist_range[1]
 
 dt = args.sampling_interval
+
+bootstrap_num = args.bootstrap_num
+bootstrap_ratio = args.bootstrap_ratio
+if bootstrap_num <= 1:
+  bootstrap_num = 1
+  bootstrap_ratio = 0.8 
+
+n_harmonic_degree = args.harmonic_degree
 
 out_dir = args.out_dir
 flag_plot = args.plot
@@ -296,69 +314,103 @@ polar_angle = np.array(polar_angle_list)
 ellipticity = np.array(ellipticity_list)
 stnm_src = np.array(stnm_src_list)
 
-# sort list against az
 idx = np.argsort(az)
 az = az[idx]
 polar_angle = polar_angle[idx]
 stnm_src = stnm_src[idx]
 ellipticity = ellipticity[idx]
-
-# get integration intervals for each az samples
-naz = len(az)
-az_ext = np.zeros(naz+2)
-az_ext[0] = az[-1]-360.0
-az_ext[-1] = az[0]+360.0
-az_ext[1:naz+1] = az
-daz = (az_ext[2:naz+2] - az_ext[0:naz])/2.0
-#print(daz)
-#print(np.sum(daz))
-
-# Fourier coefficients
-nc = 10
-c = np.zeros(nc)*1j
-
-az_rad = np.deg2rad(az)
-daz_rad = np.deg2rad(daz)
 weight = 1.0 - ellipticity
-sum_weight_daz_rad = np.sum(weight*daz_rad)
-for i in range(nc):
-  c[i] = 2.0*np.sum(polar_angle*np.exp(-1j*i*az_rad)*daz_rad*weight)/sum_weight_daz_rad
-  if i == 0:
-    c[i] = c[i]/2.0
 
-amp = np.abs(c)
-phi = np.angle(c,deg=True)
+nstn = len(az)
+# max harmonic degree
+#n_harmonic_degree = 10
+# d(az) ~ sum(amp_n*cos(n*(az - phi_n)), n=0,N)
+amp = np.zeros((bootstrap_num, n_harmonic_degree))
+phi = np.zeros((bootstrap_num, n_harmonic_degree))
 
+for isample in range(bootstrap_num):
+  print("bootstrap No. %d"%(isample))
+  # randomly select part of the data
+  idx = np.random.rand(nstn)<=bootstrap_ratio
+  az_sample = az[idx]
+  polar_angle_sample = polar_angle[idx]
+  stnm_src_sample = stnm_src[idx]
+  ellipticity_sample = ellipticity[idx]
+  weight_sample = weight[idx]
+  # sort list against az
+  idx = np.argsort(az_sample)
+  az_sample = az_sample[idx]
+  polar_angle_sample = polar_angle_sample[idx]
+  stnm_src_sample = stnm_src_sample[idx]
+  ellipticity_sample = ellipticity_sample[idx]
+  # get integration intervals for each az samples
+  naz = len(az_sample)
+  az_ext = np.zeros(naz+2)
+  az_ext[0] = az_sample[-1]-360.0
+  az_ext[-1] = az_sample[0]+360.0
+  az_ext[1:naz+1] = az_sample
+  daz = (az_ext[2:naz+2] - az_ext[0:naz])/2.0
+  #print(daz)
+  #print(np.sum(daz))
+  # Fourier coefficients
+  c = np.zeros(n_harmonic_degree)*1j
+  az_rad = np.deg2rad(az_sample)
+  daz_rad = np.deg2rad(daz)
+  sum_weight_daz_rad = np.sum(weight_sample*daz_rad)
+  for i in range(n_harmonic_degree):
+    c[i] = 2.0*np.sum(polar_angle_sample*np.exp(-1j*i*az_rad)*daz_rad*weight_sample)/sum_weight_daz_rad
+    if i == 0: c[i] = c[i]/2.0
+  amp[isample,:] = np.abs(c)
+  phi[isample,:] = np.angle(c,deg=True)
+  phi[isample,0] = (-phi[isample,0])%360
+  phi[isample,1::] = (-phi[isample,1::])%360/np.arange(1,n_harmonic_degree)
+
+# statistics
+amp_mean = np.mean(amp, axis=0)
+phi_mean = np.mean(phi, axis=0)
+amp_std = np.std(amp, axis=0)
+phi_std = np.std(phi, axis=0)
+
+# write out results
 out_file = "%s/%s_fourier.txt"%(out_dir,stnm_rec)
 with open(out_file, "w") as f:
-  f.write("#degree amplitude(deg) cosine_phase_angle(deg)\n")
-  for i in range(nc):
-    if i == 0:
-      f.write("%02d  %+8.1f  %+8.1f\n"%(i, amp[i], (-phi[i])%360))
-    else:
-      f.write("%02d  %+8.1f  %+8.1f\n"%(i, amp[i], (-phi[i])%360/i))
+  # write out average/std
+  f.write("#Statistics\n")
+  f.write("#degree amplitude(deg) std cosine_phase_angle(deg) std\n")
+  for ideg in range(n_harmonic_degree):
+    f.write("%02d  %+8.1f  %+8.1f  %+8.1f  %+8.1f\n"%(
+      ideg, amp_mean[ideg], amp_std[ideg], phi_mean[ideg], phi_std[ideg]))
+  # write out each results from each sample
+  for isample in range(bootstrap_num):
+    f.write("#sample %d\n"%(isample))
+    f.write("#degree amplitude(deg) cosine_phase_angle(deg)\n")
+    for ideg in range(n_harmonic_degree):
+      f.write("%02d  %+8.1f  %+8.1f\n"%(ideg, amp[isample,ideg], phi[isample,ideg]))
 
 #====== plot Fourier coeff.
 fig = plt.figure(figsize=(11, 8.5)) # US Letter
 
 plt.subplot(211)
-deg = np.arange(0,nc)
-plt.plot(deg, amp, 'r-o')
-for i in range(len(phi)):
-  plt.text(deg[i]+0.1, amp[i], "%.1f"%(amp[i]))
-plt.xlim([0, nc-1])
+deg = np.arange(0,n_harmonic_degree)
+plt.plot(deg, amp_mean, 'k-o', markersize=10)
+for i in range(n_harmonic_degree):
+  plt.plot(deg[i]*np.ones(bootstrap_num), amp[:,i], 'k.', markersize=5)
+  plt.text(deg[i]+0.1, amp_mean[i], "%.1f"%(amp_mean[i]), va='center',ha='left',fontsize=18)
+plt.xlim([0, n_harmonic_degree-1])
 plt.ylabel("Amplitude (deg)")
+plt.tick_params(axis='both', which='major', labelsize=20)
 plt.title("%s Fourier series of Rayleigh wave polarization deviation anlge: %s"%(figure_title,stnm_rec))
 
 plt.subplot(212)
-deg1 = deg.copy(); deg1[0] = 1
-plt.plot(deg, (-phi)%360/deg1, 'r-o')
-for i in range(len(phi)):
-  plt.text(deg[i]+0.1, (-phi[i])%360/deg1[i], "%.1f"%((-phi[i])%360/deg1[i]))
-plt.xlim([0, nc-1])
+plt.plot(deg, phi_mean, 'k-o', markersize=10)
+for i in range(n_harmonic_degree):
+  plt.plot(deg[i]*np.ones(bootstrap_num), phi[:,i], 'k.', markersize=5)
+  plt.text(deg[i]+0.1, phi_mean[i], "%.1f"%(phi_mean[i]), va='bottom',ha='left',fontsize=18)
+plt.xlim([0, n_harmonic_degree-1])
 plt.ylim([0, 360])
 plt.ylabel("Angle (deg)")
 plt.xlabel("Harmonic degree")
+plt.tick_params(axis='both', which='major', labelsize=20)
 
 #plt.show()
 outfig = "%s/%s_fourier.pdf"%(out_dir,stnm_rec)
@@ -367,9 +419,10 @@ fig.savefig(outfig, format="pdf")
 #======  plot deviation angle
 fig = plt.figure(figsize=(11, 8.5)) # US Letter
 
-plt.plot(az, polar_angle, 'ro')
-for i in range(len(az_list)):
-  plt.text(az[i]+1, polar_angle[i], "%s(%.2f)"%(stnm_src[i], weight[i]))
+plt.plot(az, polar_angle, 'ko', markersize=10)
+for i in range(nstn):
+  plt.text(az[i]+1, polar_angle[i], " %s(%.2f)"%(stnm_src[i], weight[i]), 
+           va='center',ha='left', fontsize=18)
 
 out_file = "%s/%s_polarization.txt"%(out_dir,stnm_rec)
 with open(out_file, "w") as f:
@@ -381,10 +434,12 @@ with open(out_file, "w") as f:
 az1 = np.linspace(0,2*np.pi,100)
 polar_angle1 = np.zeros(az1.shape)
 for i in range(3):
-  plt.plot(np.rad2deg(az1), np.real(c[i]*np.exp(1j*i*az1)), '--')
-  polar_angle1 += np.real(c[i]*np.exp(1j*i*az1))
+  #plt.plot(np.rad2deg(az1), np.real(c[i]*np.exp(1j*i*az1)), '-')
+  plt.plot(np.rad2deg(az1), amp_mean[i]*np.cos(i*(az1 - np.deg2rad(phi_mean[i]))), '-')
+  #polar_angle1 += np.real(c[i]*np.exp(1j*i*az1))
 
 #plt.plot(np.rad2deg(az1), polar_angle1, 'k-')
+plt.tick_params(axis='both', which='major', labelsize=20)
 
 plt.xlabel('Radial direction (deg)')
 plt.ylabel('Deviation angle of Rayleigh polarization (clockwise from radial, deg)')
