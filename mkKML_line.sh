@@ -10,7 +10,7 @@ SYNOPSIS
 DESCRIPTION
 
 PARAMETERS"
-  input_file: multi-segment lines of lat,lon seperated by <
+  input_file: multi-segment lines of lon,lat seperated by <
   group_name: line group name
 
 NOTES
@@ -51,7 +51,7 @@ cat<<EOF
 EOF
 
 awk '$1==">"{printf "</coordinates> </LineString> </Placemark>\n<Placemark> <name>LineString</name> <description>fault line</description> <styleUrl>#yellowline</styleUrl> <LineString> <altitudeMode>relativeToGround</altitudeMode> <coordinates>\n"};
-$1!=">"{printf "%f,%f,0 \n", $1, $2}' $input_file
+$1!=">"&&$1!~/#/{printf "%f,%f,0 \n", $1, $2}' $input_file
 
 cat<<EOF
 </coordinates> </LineString> </Placemark>

@@ -3,7 +3,7 @@
 # MKKML create .kml file for displaying in GoogleEarth
 #--------------------------------------------------------------------------
 # Usage: cat LIST | ./mkKML TITLE MARKER > FILE.kml
-# LIST is a file containing "stla stlo stnm" on each row (like, 135 35 ST1).
+# LIST is a file containing "stlo stla stnm" on each row (like, 135 35 ST1).
 # TITLE is the name showing in the GoogleEarth (if blank, default name used);
 # MARKER is the symbol file name (if blank, default symbol used);
 #--------------------------------------------------------------------------
@@ -30,7 +30,7 @@ echo '<kml xmlns="http://earth.google.com/kml/2.2">'
 echo '<Document>'
 echo "<name>$title</name>"
 
-while read stla stlo stnm 
+while read stlo stla stnm 
 do
 	echo '<Placemark>'
 	echo "<Style><IconStyle><Icon><href>$marker</href></Icon></IconStyle></Style>"
