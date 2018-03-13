@@ -314,8 +314,9 @@ do
         -sta $stla $stlo --time -ph $phase_name | head -n1 | awk '{print $1}')
     if [ -z "$ttp" ]
     then
-      echo "[ERROR] taup_time failed to get travaltime for $net $sta $loc $cha" >> $log_file
-      exit 1
+      echo "[WARN] taup_time failed to get $phase_name travaltime for $net $sta $loc $cha" >> $log_file
+      echo "taup_time -evt $evla $evlo -h $evdp -sta $stla $stlo --time -ph $phase_name" >> $log_file
+      continue #exit 1
     fi
     # get time window
     t0=$(echo "$evoepoch + $twin_begin + $ttp" | bc -l)
