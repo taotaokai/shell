@@ -1,4 +1,4 @@
-! Haskell matrix of P-SV motion in plane-layered isotropic elastic medium 
+! Haskell matrix of P-SV and SH motion in plane-layered isotropic elastic medium 
 !
 !--THEORY
 !
@@ -18,14 +18,26 @@
 !       -1i*w*A*V(w) = dV(w)/dz + F(w)
 !
 !   The Jordan decomposition gives A = M * J * inv(M)
+!  
+!   For P-SV motion: 
 !
-!   M: mode matrix (4 by 4 matrix),
-!       M(:,1|3): down-going P|SV, M(:,2|4): up-going P|SV;
+!     M: mode matrix (4 by 4 matrix),
+!         M(:,1|3): down-going P|SV, M(:,2|4): up-going P|SV;
 !
-!   Minv: inverse mode (projection) matrix (4 by 4 matrix); 
-!       Minv(1|3,:): down-going P|SV, Minv(2|4,:): up-going P|SV.
+!     Minv: inverse mode (projection) matrix (4 by 4 matrix); 
+!         Minv(1|3,:): down-going P|SV, Minv(2|4,:): up-going P|SV.
 !
-!   J: diagonal matrix of vertical slownesses, J = diag([-qp,qp,-qs,qs]);
+!     J: diagonal matrix of vertical slownesses, J = diag([-qp,qp,-qs,qs]);
+!
+!   For SH motion:
+!
+!     M: mode matrix (2 by 2 matrix),
+!         M(:,1): down-going SH, M(:,2): up-going SV;
+!
+!     Minv: inverse mode (projection) matrix (2 by 2 matrix); 
+!         Minv(1,:): down-going SH, Minv(2,:): up-going SH.
+!
+!     J: diagonal matrix of vertical slownesses, J = diag([-qs,qs]);
 !
 !   In one homogeneous layer: V(z) = M * exp(1i*w*J*z) * Minv * V(0)
 !
@@ -40,13 +52,14 @@
 !
 ! 2) vertical direction points downward to the earth's center;
 !
-! 3) Polarization of down- and up-going waves (all have positive radial projection)
+! 3) Polarization of down- and up-going waves (chosen to have positive
+! radial/tangential velocity component)
 ! 
 !                     Down-going |  Up-going
-!  (tangential) T.-------------------------------> R(radial)
+!  (tangential) Tx-------------------------------> R(radial)
 !                |      SV       |       P
 !                |     /         |      /
-!                |    *          |     *  
+!                |    x SH       |     x SH
 !                |     \         |      \
 !                |       P       |       SV
 !                V   
@@ -59,6 +72,7 @@
 ! [2012-11-17] modified: change the polarization
 ! [2013-03-16] export to fortran 
 ! [2017-06-17] add RF_PSV_ISO
+! [2018-04-25] add subroutines for SH motion
 
 !
 !-------------------------------------------------------------
@@ -368,6 +382,55 @@ Minv = Minv/rho
 ! vertical slowness 
 !     down  up  down up
 Q = ((/-qp, qp, -qs, qs/))
+
+end subroutine
+
+!
+!--------------------------------------------------------
+!
+
+subroutine Mode_SH_ISO(vs,rho,p, M,Minv,Q)
+!
+!--INPUT
+!   complex*8 :: vs,rho: Vs(km/s) and density(g/cm^3)
+!   complex*8 :: p: ray parameter(s/km)
+!
+!--OUTPUT
+!   complex*16 :: M(2,2), Minv(2,2), mode and inverse mode matrix for SH motion
+!   complex*16 :: Q(2), vertical slownesses
+
+implicit none
+
+complex*16, parameter :: XONE = (1,0)
+
+complex*16, intent(in) :: vs, rho, p
+
+complex*16, dimension(2,2), intent(out) :: M, Minv
+complex*16, dimension(2), intent(out) :: Q
+
+complex*16 :: p2, vs2, mu, qs, qsmu
+
+p2 = p**2
+vs2 = vs**2
+mu = rho*vs2
+! NOTE for post-critial incidence, the upper plane branch of sqrt(-1) chosen by default should only be used for positive frequency. For negative frequency the lower plane should be used, i.e. -sqrt(). Since we always work with positive frequency, this issue should be safely avoided. 
+qs = sqrt(1/vs2-p2)
+qsmu = qs*mu 
+
+! Mode matrix
+!            down-S    up-S
+M(1,:) = ( (/  XONE,   XONE /) ) ! Vr
+M(2,:) = ( (/ -qsmu,   qsmu /) ) ! Vz
+
+! inverse of the Mode matrix
+!                  Vt        Tr           
+Minv(1,:) = ( (/ XONE,  -XONE/qsmu /) ) ! down-S
+Minv(2,:) = ( (/ XONE,   XONE/qsmu /) ) ! up-S
+Minv = Minv/2
+
+! vertical slowness 
+!       down up
+Q = ((/ -qs, qs/))
 
 end subroutine
 

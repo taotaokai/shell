@@ -9,7 +9,7 @@ import matplotlib
 #matplotlib.use("pdf")
 import matplotlib.pyplot as plt
 #
-import Haskell_PSV_ISO as haskell
+import Haskell_isotropy as haskell
 
 #====== parameters
 def convert_arg_line_to_args(arg_line): 
