@@ -10,7 +10,7 @@ SYNOPSIS
 DESCRIPTION
 
 PARAMETERS"
-  input_file: multi-segment lines of lon,lat seperated by <
+  input_file: multi-segment lines of lon,lat seperated by >
   group_name: line group name
 
 NOTES

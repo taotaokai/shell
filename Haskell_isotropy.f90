@@ -39,9 +39,9 @@
 !
 !     J: diagonal matrix of vertical slownesses, J = diag([-qs,qs]);
 !
-!   In one homogeneous layer: V(z) = M * exp(1i*w*J*z) * Minv * V(0)
+!   In one homogeneous layer: V(z) = M * exp(-1i*w*J*z) * Minv * V(0)
 !
-!   The Haskell matrix is defined as H(z;0) = M * exp(1i*w*J*z) * Minv
+!   The Haskell matrix is defined as H(z;0) = M * exp(-1i*w*J*z) * Minv
 !
 !--NOTE 
 !

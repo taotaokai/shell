@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(
 parser.convert_arg_line_to_args = convert_arg_line_to_args
 
 parser.add_argument("--m1", metavar="Vel", type=float, nargs=3, default=[6, 3.5, 2.7],
-    help="vp,vs,rho below the interface in km/s,km/s,g/cm^3")
+    help="vp,vs,rho above the interface in km/s,km/s,g/cm^3")
 
 parser.add_argument("--m2", metavar="Vel", type=float, nargs=3, default=[8, 4.5, 3.3],
     help="vp,vs,rho below the interface in km/s,km/s,g/cm^3")
