@@ -10,6 +10,7 @@ import warnings
 import argparse
 #
 import numpy as np
+import scipy.signal as signal
 #
 #import matplotlib
 ##matplotlib.use("pdf")
@@ -66,6 +67,9 @@ parser.add_argument("--sampling_interval", type=float, default=0.1,
 parser.add_argument("--taper_percentage", type=float, default=0.1,
     help="Decimal percentage of taper at both ends (ranging from 0. to 0.5)")
 
+parser.add_argument("--npts_freq_smooth", type=float, default=0,
+    help="n points frequency running average")
+
 parser.add_argument("--out_dir", type=str, default=None,
     help="output directory for stacking results")
 
@@ -75,6 +79,8 @@ args = parser.parse_args()
 nyqfreq = 0.5/args.sampling_interval
 if args.max_freq > 0.9*nyqfreq:
   raise Exception("sampling interval too large!")
+
+
 
 #====== read data
 print("=======================================")
@@ -110,6 +116,10 @@ nt = len(times)
 cc_times = np.arange(-(nt-1), nt)*args.sampling_interval
 idx = np.arange(-(nt-1),nt)
 idx[idx<0] += (2*nt-1)
+
+# n-point frequency running average
+if args.npts_freq_smooth > 0:
+  smth_win = np.ones(args.npts_freq_smooth)
 
 cc_window = {}
 for iwin in range(cc_window_num):
@@ -174,6 +184,8 @@ for iwin in range(cc_window_num):
     #taper_func = cosine_taper(times, taper_corner)
     data_fft = np.fft.rfft(data, n=2*nt-1, axis=1)
     data_fft_power = np.sum(np.abs(data_fft)**2, axis=0)
+    if args.npts_freq_smooth > 0:
+      data_fft_power = signal.convolve(data_fft_power, smth_win, mode='same') / sum(smth_win)
 
     for icomp in range(ncomp):
       for jcomp in range(icomp,ncomp):
