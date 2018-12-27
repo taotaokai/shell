@@ -76,8 +76,8 @@ do
         continue
     fi
 
-    #sacpz_file=(${sacpz_dir}/SAC_PZs_${net}_${sta}_${chan}_${loc}*)
-    sacpz_file=(${sacpz_dir}/${channel_id}*)
+    # account for different sacpz file naming conventions (e.g. SAC_PZs_... or NET.STA.LOC.CHA)
+    sacpz_file=( $(find ${sacpz_dir} -name "SAC_PZs_${net}_${sta}_${chan}_${loc}*" -o -name "${channel_id}") )
     if [ ! -f "${sacpz_file[0]}" ]; then
         echo "[WARN] SACPZ file not found for ${channel_id}, SKIP"
         continue
