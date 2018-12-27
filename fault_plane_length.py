@@ -26,7 +26,7 @@ d = 10**(0.68*Mw - 4.59)
 
 A = M0/mu/d
 
-# width = length/2
+# assume width = length/2
 length = (2.0*A)**0.5
 
-print("length ~ %f (km)" % (length/1000))
+print("slip %f (m), area %f (km^2), length %f (km)" % (d, A*1e-6, length*1e-3))
