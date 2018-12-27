@@ -91,6 +91,19 @@ echo "# $strLink"
 
 wget $strLink -O $O
 
+if [ x$O != x- ]
+then
+  tmpfile=$(mktemp -p .)
+  tmpfile2=$(mktemp -p .)
+  cat<<EOF > $tmpfile 
+#This run: $0 -T$T -M$M -R$R -D$depth -C$catalog -O$O
+#$strLink
+EOF
+  cat $tmpfile $O > $tmpfile2
+  mv $tmpfile2 $O
+  rm $tmpfile
+fi
+  
 echo "Finished. "
 
 # END

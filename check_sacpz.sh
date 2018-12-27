@@ -20,7 +20,7 @@ NOTE
     And a broadband velocity seismometer should have a flat velocity response
     within a wide frequency range, like 120s~100Hz (e.g. STS-2, Trillium-120,)
     That means, if the input is a delta function, the output should be very close to
-    a broad band-pass filtered first derivative of delta.  
+    a broad band-pass filtered first derivative of delta in both time and waveform.  
     When I compare IRF with the first derivative of delta, both are low-passed below 2 Hz.
 
 EOF
