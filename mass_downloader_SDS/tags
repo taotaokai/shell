@@ -1,0 +1,127 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/taok/EU60/data/CMTSOLUTION87/test_mass_downloader/mass_downloader_SDS/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+Channel	download_helpers.py	/^class Channel(_SlotsEqualityComparisionObject):$/;"	c
+ChannelAvailability	utils.py	/^ChannelAvailability = collections.namedtuple($/;"	v
+CircularDomain	domain.py	/^class CircularDomain(Domain):$/;"	c
+Client	sds.py	/^class Client(object):$/;"	c
+ClientDownloadHelper	download_helpers.py	/^class ClientDownloadHelper(object):$/;"	c
+Domain	domain.py	/^class Domain(metaclass=ABCMeta):$/;"	c
+EARTH_RADIUS	utils.py	/^EARTH_RADIUS = 6371009$/;"	v
+ERRORS	utils.py	/^ERRORS = (ConnectionError, FDSNException, HTTPError, HTTPException, URLError,$/;"	v
+FDSNMassDownloaderException	mass_downloader.py	/^class FDSNMassDownloaderException(FDSNException):$/;"	c
+FMTSTR	sds.py	/^    FMTSTR = SDS_FMTSTR$/;"	v	class:Client
+FORMAT_STR_PLACEHOLDER_REGEX	sds.py	/^FORMAT_STR_PLACEHOLDER_REGEX = r"{(\\w+?)?([!:].*?)?}"$/;"	v
+GlobalDomain	domain.py	/^class GlobalDomain(Domain):$/;"	c
+MassDownloader	mass_downloader.py	/^class MassDownloader(object):$/;"	c
+RectangularDomain	domain.py	/^class RectangularDomain(Domain):$/;"	c
+Restrictions	restrictions.py	/^class Restrictions(object):$/;"	c
+SDS_FMTSTR	sds.py	/^SDS_FMTSTR = os.path.join($/;"	v
+STATUS	download_helpers.py	/^STATUS = Enum(["none", "needs_downloading", "downloaded", "ignore", "exists",$/;"	v
+SphericalNearestNeighbour	utils.py	/^class SphericalNearestNeighbour(object):$/;"	c
+Station	download_helpers.py	/^class Station(_SlotsEqualityComparisionObject):$/;"	c
+TimeInterval	download_helpers.py	/^class TimeInterval(_SlotsEqualityComparisionObject):$/;"	c
+_SlotsEqualityComparisionObject	download_helpers.py	/^class _SlotsEqualityComparisionObject(object):$/;"	c
+__all__	__init__.py	/^__all__ = ['MassDownloader', 'Restrictions', 'Domain', 'RectangularDomain',$/;"	v
+__bool__	download_helpers.py	/^    def __bool__(self):$/;"	m	class:ClientDownloadHelper
+__eq__	download_helpers.py	/^    def __eq__(self, other):$/;"	m	class:_SlotsEqualityComparisionObject
+__eq__	restrictions.py	/^    def __eq__(self, other):$/;"	m	class:Restrictions
+__init__	domain.py	/^    def __init__(self, latitude, longitude, minradius, maxradius):$/;"	m	class:CircularDomain
+__init__	domain.py	/^    def __init__(self, minlatitude, maxlatitude, minlongitude,$/;"	m	class:RectangularDomain
+__init__	download_helpers.py	/^    def __init__(self, client, client_name, restrictions, domain,$/;"	m	class:ClientDownloadHelper
+__init__	download_helpers.py	/^    def __init__(self, location, channel, intervals):$/;"	m	class:Channel
+__init__	download_helpers.py	/^    def __init__(self, network, station, latitude, longitude, channels,$/;"	m	class:Station
+__init__	download_helpers.py	/^    def __init__(self, start, end, filename=None, status=None):$/;"	m	class:TimeInterval
+__init__	mass_downloader.py	/^    def __init__(self, providers=None, debug=False, configure_logging=True, log_file=None):$/;"	m	class:MassDownloader
+__init__	restrictions.py	/^    def __init__(self, starttime, endtime,$/;"	m	class:Restrictions
+__init__	sds.py	/^    def __init__(self, sds_root, sds_type="D", format="MSEED",$/;"	m	class:Client
+__init__	utils.py	/^    def __init__(self, data):$/;"	m	class:SphericalNearestNeighbour
+__iter__	restrictions.py	/^    def __iter__(self):$/;"	m	class:Restrictions
+__len__	download_helpers.py	/^    def __len__(self):$/;"	m	class:ClientDownloadHelper
+__ne__	restrictions.py	/^    def __ne__(self, other):$/;"	m	class:Restrictions
+__repr__	download_helpers.py	/^    def __repr__(self):$/;"	m	class:TimeInterval
+__slots__	download_helpers.py	/^    __slots__ = ["location", "channel", "intervals"]$/;"	v	class:Channel	file:
+__slots__	download_helpers.py	/^    __slots__ = ["network", "station", "latitude", "longitude", "channels",$/;"	v	class:Station	file:
+__slots__	download_helpers.py	/^    __slots__ = ["start", "end", "filename", "status"]$/;"	v	class:TimeInterval	file:
+__slots__	download_helpers.py	/^    __slots__ = []$/;"	v	class:_SlotsEqualityComparisionObject	file:
+__str__	download_helpers.py	/^    def __str__(self):$/;"	m	class:Channel
+__str__	download_helpers.py	/^    def __str__(self):$/;"	m	class:ClientDownloadHelper
+__str__	download_helpers.py	/^    def __str__(self):$/;"	m	class:Station
+_check_downloaded_data	download_helpers.py	/^    def _check_downloaded_data(self):$/;"	m	class:ClientDownloadHelper
+_get_client	mass_downloader.py	/^        def _get_client(client_name):$/;"	f	member:MassDownloader._initialize_clients	file:
+_get_current_endtime	sds.py	/^    def _get_current_endtime(self, network, station, location, channel,$/;"	m	class:Client
+_get_dbfile	utils.py	/^    def _get_dbfile(archive_root, net, sta, loc, chan, starttime):        $/;"	f	function:download_and_split_mseed_bulk	file:
+_get_filename	sds.py	/^    def _get_filename(self, network, station, location, channel, time,$/;"	m	class:Client
+_get_filenames	sds.py	/^    def _get_filenames(self, network, station, location, channel, starttime,$/;"	m	class:Client
+_get_stationxml_contents_slow	utils.py	/^def _get_stationxml_contents_slow(filename):$/;"	f
+_group_msr_for_SDS	sds.py	/^        def _group_msr_for_SDS(mseed_file, sds_type):$/;"	f	member:Client.insert_mseed_file	file:
+_initialize_clients	mass_downloader.py	/^    def _initialize_clients(self):$/;"	m	class:MassDownloader
+_parse_miniseed_filenames	download_helpers.py	/^    def _parse_miniseed_filenames(self, filenames, restrictions):$/;"	m	class:ClientDownloadHelper
+_parse_mseed	sds.py	/^        def _parse_mseed(mseed_file):$/;"	f	member:Client.insert_mseed_file	file:
+_parse_path_to_dict	sds.py	/^def _parse_path_to_dict(path, pattern, group_map):$/;"	f
+_remove_failed_and_ignored_stations	download_helpers.py	/^    def _remove_failed_and_ignored_stations(self):$/;"	m	class:ClientDownloadHelper
+_star_download_mseed	download_helpers.py	/^        def _star_download_mseed(args):$/;"	f	member:ClientDownloadHelper.download_mseed	file:
+_wildcarded	sds.py	/^    def _wildcarded(match):$/;"	f	function:_wildcarded_except	file:
+_wildcarded_except	sds.py	/^def _wildcarded_except(exclude=[]):$/;"	f
+discard_stations	download_helpers.py	/^    def discard_stations(self, existing_client_dl_helpers):$/;"	m	class:ClientDownloadHelper
+download	mass_downloader.py	/^    def download(self, domain, restrictions, mseed_storage,$/;"	m	class:MassDownloader
+download_and_split_mseed_bulk	utils.py	/^def download_and_split_mseed_bulk(client, client_name, chunks, archive_root, logger):$/;"	f
+download_mseed	download_helpers.py	/^    def download_mseed(self, chunk_size_in_mb=25, threads_per_client=3):$/;"	m	class:ClientDownloadHelper
+download_mseed_bulk	utils.py	/^def download_mseed_bulk(client, client_name, chunks, logger):$/;"	f
+download_stationxml	download_helpers.py	/^    def download_stationxml(self, threads=3):$/;"	m	class:ClientDownloadHelper
+download_stationxml	utils.py	/^def download_stationxml(client, client_name, bulk, filename, logger):$/;"	f
+filter_channel_priority	utils.py	/^def filter_channel_priority(channels, key, priorities=None):$/;"	f
+filter_stations_based_on_minimum_distance	download_helpers.py	/^    def filter_stations_based_on_minimum_distance($/;"	m	class:ClientDownloadHelper
+get_all_nslc	sds.py	/^    def get_all_nslc(self, sds_type=None, datetime=None):$/;"	m	class:Client
+get_all_stations	sds.py	/^    def get_all_stations(self, sds_type=None):$/;"	m	class:Client
+get_availability	download_helpers.py	/^    def get_availability(self):$/;"	m	class:ClientDownloadHelper
+get_availability_percentage	sds.py	/^    def get_availability_percentage(self, network, station, location, channel,$/;"	m	class:Client
+get_filename	utils.py	/^    def get_filename(starttime, endtime, c):$/;"	f	function:download_and_split_mseed_bulk	file:
+get_latency	sds.py	/^    def get_latency(self, network, station, location, channel,$/;"	m	class:Client
+get_loc	download_helpers.py	/^                    def get_loc(x):$/;"	f	member:ClientDownloadHelper.get_availability	file:
+get_mseed_filename	utils.py	/^def get_mseed_filename(str_or_fct, network, station, location, channel,$/;"	f
+get_query_parameters	domain.py	/^    def get_query_parameters(self):$/;"	m	class:CircularDomain
+get_query_parameters	domain.py	/^    def get_query_parameters(self):$/;"	m	class:Domain
+get_query_parameters	domain.py	/^    def get_query_parameters(self):$/;"	m	class:GlobalDomain
+get_query_parameters	domain.py	/^    def get_query_parameters(self):$/;"	m	class:RectangularDomain
+get_stationxml_contents	utils.py	/^def get_stationxml_contents(filename):$/;"	f
+get_stationxml_filename	utils.py	/^def get_stationxml_filename(str_or_fct, network, station, channels,$/;"	f
+get_waveforms	sds.py	/^    def get_waveforms(self, network, station, location, channel, starttime,$/;"	m	class:Client
+get_waveforms_bulk	sds.py	/^    def get_waveforms_bulk(self, bulk):$/;"	m	class:Client
+has_data	sds.py	/^    def has_data(self, network, station, location, channel, sds_type=None):$/;"	m	class:Client
+has_existing_or_downloaded_time_intervals	download_helpers.py	/^    def has_existing_or_downloaded_time_intervals(self):$/;"	m	class:Station
+has_existing_time_intervals	download_helpers.py	/^    def has_existing_time_intervals(self):$/;"	m	class:Station
+insert_mseed_file	sds.py	/^    def insert_mseed_file(self, mseed_file, sds_type=None):$/;"	m	class:Client
+is_in_domain	domain.py	/^    def is_in_domain(self, latitude, longitude):$/;"	m	class:Domain
+it	restrictions.py	/^        def it():$/;"	f	member:Restrictions.__iter__	file:
+logger	mass_downloader.py	/^logger = logging.getLogger("obspy.clients.fdsn.mass_downloader")$/;"	v
+needs_station_file	download_helpers.py	/^    def needs_station_file(self):$/;"	m	class:Channel
+np	download_helpers.py	/^import numpy as np$/;"	I	nameref:module:numpy
+np	sds.py	/^import numpy as np$/;"	I	nameref:module:numpy
+np	utils.py	/^import numpy as np$/;"	I	nameref:module:numpy
+prepare_mseed_download	download_helpers.py	/^    def prepare_mseed_download(self):$/;"	m	class:ClientDownloadHelper
+prepare_mseed_download	download_helpers.py	/^    def prepare_mseed_download(self, sds_client, logger): # KTAO: add logger$/;"	m	class:Station
+prepare_stationxml_download	download_helpers.py	/^    def prepare_stationxml_download(self):$/;"	m	class:ClientDownloadHelper
+prepare_stationxml_download	download_helpers.py	/^    def prepare_stationxml_download(self, stationxml_storage, logger):$/;"	m	class:Station
+query	utils.py	/^    def query(self, points):$/;"	m	class:SphericalNearestNeighbour
+query_pairs	utils.py	/^    def query_pairs(self, maximum_distance):$/;"	m	class:SphericalNearestNeighbour
+remove_files	download_helpers.py	/^    def remove_files(self, logger, reason):$/;"	m	class:Station
+safe_delete	utils.py	/^def safe_delete(filename):$/;"	f
+sanitize_downloads	download_helpers.py	/^    def sanitize_downloads(self):$/;"	m	class:ClientDownloadHelper
+sanitize_downloads	download_helpers.py	/^    def sanitize_downloads(self, logger):$/;"	m	class:Station
+socket_timeout	utils.py	/^from socket import timeout as socket_timeout$/;"	x	nameref:unknown:timeout
+spherical2cartesian	utils.py	/^    def spherical2cartesian(data):$/;"	m	class:SphericalNearestNeighbour
+star_download_station	download_helpers.py	/^        def star_download_station(args):$/;"	f	member:ClientDownloadHelper.download_stationxml	file:
+stationxml_filename	download_helpers.py	/^    def stationxml_filename(self):$/;"	m	class:Station
+stationxml_filename	download_helpers.py	/^    def stationxml_filename(self, value):$/;"	m	class:Station
+stream_warningregistry	sds.py	/^                stream_warningregistry$/;"	x	member:Client.get_availability_percentage	file:	nameref:unknown:__warningregistry__
+temporal_bounds	download_helpers.py	/^    def temporal_bounds(self):$/;"	m	class:Channel
+temporal_bounds	download_helpers.py	/^    def temporal_bounds(self):$/;"	m	class:Station
