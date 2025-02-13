@@ -667,13 +667,15 @@ class Client(object):
             msr_groups = {}
             mseed_records = _parse_mseed(mseed_file)
             for info, rec in mseed_records:
-                net = info['network']
-                sta = info['station']
-                loc = info['location']
-                cha = info['channel']
+                # strip().strip('\0'): remove whitespaces and null's
+                # otherwise, invalid file path containing null might occur 
+                net = info['network'].strip().strip('\0')
+                sta = info['station'].strip().strip('\0')
+                loc = info['location'].strip().strip('\0')
+                cha = info['channel'].strip().strip('\0')
                 starttime = info['starttime']
                 db_path = self._get_filename(net, sta, loc, cha, starttime, sds_type)
-                # only keep records with integer sampling rate?
+                # only keep records with integer sampling rate? 
                 samp_rate = info['samp_rate']
                 integer_sr = round(samp_rate)
                 decimal_sr = abs(samp_rate - integer_sr)
@@ -702,7 +704,12 @@ class Client(object):
         sds_type = sds_type or self.sds_type
         msr_groups = _group_msr_for_SDS(mseed_file, sds_type=sds_type)
         for db_path, mseed_records in msr_groups.items():
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            except Exception as e:
+                warnings.warn(f'os.makedirs failed on {db_path.encode()}')
+                continue
+
             db_records = []
             if os.path.exists(db_path):
                 try:
