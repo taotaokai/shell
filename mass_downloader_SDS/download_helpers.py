@@ -506,7 +506,7 @@ class ClientDownloadHelper(object):
             raise ValueError(f'{mseed_storage} does not exist!')
         elif not os.path.isdir(mseed_storage):
             raise ValueError(f'{mseed_storage} is not a directory!')
-        self.sds_client = sds.Client(self.mseed_storage)
+        self.sds_client = sds.Client(self.mseed_storage, logger=logger)
 
     def __bool__(self):
         return bool(len(self))

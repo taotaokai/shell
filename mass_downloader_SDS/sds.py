@@ -39,6 +39,7 @@ import glob
 import os
 import re
 import warnings
+import logging
 from datetime import timedelta
 
 import numpy as np
@@ -65,7 +66,7 @@ class Client(object):
     FMTSTR = SDS_FMTSTR
 
     def __init__(self, sds_root, sds_type="D", format="MSEED",
-                 fileborder_seconds=30, fileborder_samples=5000):
+                 fileborder_seconds=30, fileborder_samples=5000, logger=None):
         """
         Initialize a SDS local filesystem client.
 
@@ -111,6 +112,10 @@ class Client(object):
         self.format = format and format.upper()
         self.fileborder_seconds = fileborder_seconds
         self.fileborder_samples = fileborder_samples
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
 
     def get_waveforms(self, network, station, location, channel, starttime,
                       endtime, merge=-1, sds_type=None, **kwargs):
@@ -179,6 +184,10 @@ class Client(object):
                 # near-realtime data these are usually just being created right
                 # at request time, e.g. when fetching current data right after
                 # midnight
+                continue
+            except Exception as e:
+                msg = f'failed to read mseed file in SDS archive: {full_path} (Error: {e})'
+                self.logger.warning(msg)
                 continue
 
         # make sure we only have the desired data, just in case the file
@@ -593,7 +602,7 @@ class Client(object):
                 msg = (
                     "Failed to extract key from pattern '{}' in path "
                     "'{}': {}").format(pattern_, file_, e)
-                warnings.warn(msg)
+                self.logger.warning(msg)
                 continue
             result.add((network, station, location, channel))
         return sorted(result)
@@ -638,7 +647,7 @@ class Client(object):
                 msg = (
                     "Failed to extract key from pattern '{}' in path "
                     "'{}': {}").format(pattern_, file_, e)
-                warnings.warn(msg)
+                self.logger.warning(msg)
                 continue
             result.add((network, station))
         return sorted(result)
@@ -659,7 +668,8 @@ class Client(object):
                         rec = fh.read(length)
                         mseed_records.append((info, rec))
                 except Exception as err:
-                    warnings.warn(f'failed to read {mseed_file}. Error: {err}')
+                    msg = f'failed to read {mseed_file}. (Error: {err})'
+                    self.logger.warning(msg)
             return mseed_records
 
         # group mseed records by the corresponding SDS file path
@@ -678,11 +688,12 @@ class Client(object):
                 db_path = self._get_filename(net, sta, loc, cha, starttime, sds_type)
                 # only keep records with integer sampling rate? 
                 samp_rate = info['samp_rate']
-                integer_sr = round(samp_rate)
-                decimal_sr = abs(samp_rate - integer_sr)
-                if decimal_sr != 0:
-                    warnings.warn(f'non-integer sampling rate: {db_path} {samp_rate}')
-                    # continue
+                # integer_sr = round(samp_rate)
+                # decimal_sr = abs(samp_rate - integer_sr)
+                # if decimal_sr != 0:
+                #     msg = f'non-integer sampling rate: {db_path} {samp_rate}'
+                #     self.logger.warning(msg)
+                #     # continue
                 npts = info['npts']
                 if db_path not in msr_groups:
                     msr_groups[db_path] = [(starttime, samp_rate, npts, rec)]
@@ -691,15 +702,18 @@ class Client(object):
             return msr_groups
 
         if not os.path.exists(mseed_file):
-            warnings.warn(f'{mseed_file} does not exit.')
+            msg = f'{mseed_file} does not exit.'
+            self.logger.warning(msg)
             return
         elif not os.path.isfile(mseed_file):
-            warnings.warn(f'{mseed_file} is not a file.')
+            msg = f'{mseed_file} is not a file.'
+            self.logger.warning(msg)
             return
         try:
             st = read(mseed_file, format='MSEED', headonly=True)
         except Exception as err:
-            warnings.warn(f'{mseed_file} is not a mseed file. Error: {err})')
+            msg = f'{mseed_file} is not a mseed file. Error: {err})'
+            self.logger.warning(msg)
             return
 
         sds_type = sds_type or self.sds_type
@@ -708,7 +722,8 @@ class Client(object):
             try:
                 os.makedirs(os.path.dirname(db_path), exist_ok=True)
             except Exception as e:
-                warnings.warn(f'os.makedirs failed on {db_path.encode()}')
+                msg = f'os.makedirs failed on {db_path.encode()}'
+                self.logger.warning(msg)
                 continue
 
             dirname = os.path.dirname(db_path)
@@ -721,9 +736,11 @@ class Client(object):
                     if os.path.exists(db_path):
                         try:
                             db_msr_groups = _group_msr_for_SDS(db_path, sds_type=sds_type)
-                            db_records = db_msr_groups[db_path] # should have only one group of mseed records
+                            if db_path in db_msr_groups:
+                                db_records = db_msr_groups[db_path] # should have only one group of mseed records
                         except Exception as e:
-                            warnings.warn(f'failed to read {db_path}\n error msg: {e}')
+                            msg = f'failed to read {db_path} (ERROR: {e})'
+                            self.logger.warning(msg)
                             # os.remove(db_path)
                     db_records.extend(mseed_records)
 
@@ -737,7 +754,7 @@ class Client(object):
                             if rec != updated_records[k]:
                                 msg = (f'overlap mseed record with different content between ' 
                                        f'{db_path} and {mseed_file} at {starttime}')
-                                warnings.warn(msg)
+                                self.logger.warning(msg)
                             # else:
                             #     warnings.warn(f'duplicated mseed record in {db_path} at {starttime}')
 
@@ -748,7 +765,8 @@ class Client(object):
                         f.write(mseed_bytes)
             except Timeout:
                 msg = f'cannot insert {mseed_file} since another process currently holds the lock of {db_path}'
-                warnings.warn(msg)
+                self.logger.warning(msg)
+
 
 def _wildcarded_except(exclude=[]):
     """

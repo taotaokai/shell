@@ -12,7 +12,8 @@ import collections
 import fnmatch
 import itertools
 import os
-import sys
+# import sys
+import warnings
 from http.client import HTTPException
 from socket import timeout as socket_timeout
 from urllib.error import HTTPError, URLError
@@ -25,6 +26,7 @@ import obspy
 from obspy.core.util.base import NamedTemporaryFile
 from obspy.clients.fdsn.client import FDSNException
 from obspy.io.mseed.util import get_record_information
+from obspy.io.mseed.core import _is_mseed
 
 import io # KTAO add
 
@@ -80,16 +82,18 @@ def download_mseed_bulk(client, client_name, chunks, logger):
 
     with NamedTemporaryFile() as tf:
         temp_filename = tf.name
+        mseed_bytes = b''
         try:
             client.get_waveforms_bulk(bulk, filename=temp_filename)
-            # If that succeeds, split the old file into multiple new ones.
-            file_size = os.path.getsize(temp_filename)
-            with open(temp_filename, 'rb') as fh:
-                mseed_bytes = fh.read()
-            logger.info(f"Client {client_name} - Successfully downloaded {file_size/1024**2} MB")
+            if _is_mseed(temp_filename):
+                file_size = os.path.getsize(temp_filename)
+                with open(temp_filename, 'rb') as fh:
+                    mseed_bytes = fh.read()
+                logger.info(f"Client {client_name} - Successfully downloaded {file_size/1024**2} MB")
+            else:
+                logger.warning(f"Client {client_name} - downloaded file is not valid mseed file")
         except Exception as e:
             logger.warning(f"Client {client_name} - Failed to downloaded ({e})")
-            mseed_bytes = b''
     return mseed_bytes
 
 
@@ -603,3 +607,21 @@ def get_mseed_filename(str_or_fct, network, station, location, channel,
     elif not isinstance(path, (str, bytes)):
         raise TypeError("'%s' is not a filepath." % str(path))
     return path
+
+
+def parse_mseed_file(mseed_file):
+    mseed_records = []
+    file_size = os.path.getsize(mseed_file)
+    with open(mseed_file, "rb") as fh:
+        try:
+            while True:
+                if fh.tell() >= (file_size - 256):
+                    break
+                info = get_record_information(fh)
+                length = info["record_length"]
+                rec = fh.read(length)
+                mseed_records.append((info, rec))
+        except Exception as err:
+            msg = f'failed to read {mseed_file}. Error: {err}'
+            warnings.warn(msg)
+    return mseed_records
