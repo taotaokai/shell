@@ -643,7 +643,7 @@ class Client(object):
             result.add((network, station))
         return sorted(result)
 
-    def insert_mseed_file(self, mseed_file, sds_type=None):
+    def insert_mseed_file(self, mseed_file, sds_type=None, timeout=10):
         from filelock import Timeout, FileLock
 
         def _parse_mseed(mseed_file):
@@ -714,7 +714,7 @@ class Client(object):
             dirname = os.path.dirname(db_path)
             filename = os.path.basename(db_path)
             lock_path = os.path.join(dirname, f'.{filename}.lock')
-            lock = FileLock(lock_path, timeout=1)
+            lock = FileLock(lock_path, timeout=timeout)
             try:
                 with lock:
                     db_records = []
