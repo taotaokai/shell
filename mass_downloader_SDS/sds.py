@@ -52,7 +52,7 @@ from obspy.io.mseed.util import get_record_information
 SDS_FMTSTR = os.path.join(
     "{year}", "{network}", "{station}", "{channel}.{sds_type}",
     "{network}.{station}.{location}.{channel}.{sds_type}.{year}.{doy:03d}")
-FORMAT_STR_PLACEHOLDER_REGEX = r"{(\w+?)?([!:].*?)?}"
+FORMAT_STR_PLACEHOLDER_REGEX = r"{(\w+?)?([!:].*?)?}"  # this also works: r'{(\w+):?\w*}'
 
 
 class Client(object):
@@ -589,10 +589,10 @@ class Client(object):
                 station = dict_["station"]
                 location = dict_["location"]
                 channel = dict_["channel"]
-            except KeyError as e:
+            except Exception as e:
                 msg = (
                     "Failed to extract key from pattern '{}' in path "
-                    "'{}': {}").format(pattern, file_, e)
+                    "'{}': {}").format(pattern_, file_, e)
                 warnings.warn(msg)
                 continue
             result.add((network, station, location, channel))
@@ -644,6 +644,7 @@ class Client(object):
         return sorted(result)
 
     def insert_mseed_file(self, mseed_file, sds_type=None):
+        from filelock import Timeout, FileLock
 
         def _parse_mseed(mseed_file):
             mseed_records = []
@@ -710,34 +711,44 @@ class Client(object):
                 warnings.warn(f'os.makedirs failed on {db_path.encode()}')
                 continue
 
-            db_records = []
-            if os.path.exists(db_path):
-                try:
-                    db_msr_groups = _group_msr_for_SDS(db_path, sds_type=sds_type)
-                    db_records = db_msr_groups[db_path] # should have only one group of mseed records
-                except Exception as e:
-                    warnings.warn(f'failed to read {db_path}\n error msg: {e}')
-                    # os.remove(db_path)
-            db_records.extend(mseed_records)
+            dirname = os.path.dirname(db_path)
+            filename = os.path.basename(db_path)
+            lock_path = os.path.join(dirname, f'.{filename}.lock')
+            lock = FileLock(lock_path, timeout=1)
+            try:
+                with lock:
+                    db_records = []
+                    if os.path.exists(db_path):
+                        try:
+                            db_msr_groups = _group_msr_for_SDS(db_path, sds_type=sds_type)
+                            db_records = db_msr_groups[db_path] # should have only one group of mseed records
+                        except Exception as e:
+                            warnings.warn(f'failed to read {db_path}\n error msg: {e}')
+                            # os.remove(db_path)
+                    db_records.extend(mseed_records)
 
-            # remove duplicated mseed record and update db file
-            updated_records = {}
-            for starttime, samp_rate, npts, rec in sorted(db_records): #, key=lambda x: (x[0], x[1], x[2])):
-                k = (starttime.ns, samp_rate, npts)
-                if k not in updated_records:
-                    updated_records[k] = rec # mseed record bytes
-                else:
-                    if rec != updated_records[k]:
-                        warnings.warn(f'duplicated mseed record with different content in {db_path} at {starttime}')
-                    else:
-                        warnings.warn(f'duplicated mseed record in {db_path} at {starttime}')
+                    # remove duplicated mseed record and update db file
+                    updated_records = {}
+                    for starttime, samp_rate, npts, rec in sorted(db_records): #, key=lambda x: (x[0], x[1], x[2])):
+                        k = (starttime.ns, samp_rate, npts)
+                        if k not in updated_records:
+                            updated_records[k] = rec # mseed record bytes
+                        else:
+                            if rec != updated_records[k]:
+                                msg = (f'overlap mseed record with different content between ' 
+                                       f'{db_path} and {mseed_file} at {starttime}')
+                                warnings.warn(msg)
+                            # else:
+                            #     warnings.warn(f'duplicated mseed record in {db_path} at {starttime}')
 
-            mseed_bytes = b''
-            for k, v in sorted(updated_records.items()):
-                mseed_bytes += v
-            with open(db_path, 'wb') as f:
-                f.write(mseed_bytes)
-
+                    mseed_bytes = b''
+                    for k, v in sorted(updated_records.items()):
+                        mseed_bytes += v
+                    with open(db_path, 'wb') as f:
+                        f.write(mseed_bytes)
+            except Timeout:
+                msg = f'cannot insert {mseed_file} since another process currently holds the lock of {db_path}'
+                warnings.warn(msg)
 
 def _wildcarded_except(exclude=[]):
     """
